@@ -1,0 +1,10 @@
+name: DATA3001
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - clouddrift=0.48
+  - pyyaml=6.0
+  - numpy=2.4
+  - matplotlib=3.10
