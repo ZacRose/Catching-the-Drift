@@ -77,17 +77,15 @@ These are the points where the whole team should check in, not just the responsi
 Week 1 - Region confirmed, setup
 Deadline: region R decided by end of this week - DONE: Benguela Current, box extended west towards South America.
 Whole team: check real observation/drifter counts for the exact extended box (not the course's example figures - those were for someone else's box), set up the shared repo, every member commits at least once, Lachlan invited as collaborator.
-Computational: lead the data-adequacy count (this is a data-access task) and get the raw dataset loading at all, even slowly.
-Quantitative: sanity-check the data-adequacy numbers statistically (is the observation count actually enough given how it's distributed across the box, not just the raw total).
-Business: start the literature/significance case for the Benguela + South Atlantic box now that the region is locked in.
+Computational: lead the data-adequacy count and get the raw dataset loading, even slowly. DONE: raw dataset loads via clouddrift (src/ingest/load.py); real count for the exact extended box confirmed against the live dataset.
 Dependency: nothing downstream can start in earnest until the real observation/drifter count is confirmed.
 Output: region logged in the README with both the data-adequacy numbers and the significance case.
 Week 2 - Working data access
-Computational: get the pipeline working end-to-end on a subsample of region's data - doesn't need to be fast or final, needs to run without crashing. Produce a coverage map (where/when drifters were present in R).
+Computational: get the pipeline working end-to-end on a subsample of region's data - doesn't need to be fast or final, needs to run without crashing. Produce a coverage map (where/when drifters were present in R). DONE: pipeline runs end-to-end (`python3 -m src.gridding.coverage`); coverage map (spatial + monthly) built from a 200-drifter subsample and saved to outputs/figures/coverage_map.png.
 Quantitative: initial EDA on the same subsample - distribution of observations across cells, an early look at where sparsity is going to bite.
 Business: continue literature review; start drafting the significance section of the README.
-Dependency: quantitative EDA depends on computational handing over something, even crude.
-Output: drifter counts/coverage map for R; a running (if crude) pipeline in the repo.
+Dependency: quantitative EDA depends on computational handing over something, even crude. Computational's output is now available for quantitative to start from.
+Output: drifter counts/coverage map for R; a running (if crude) pipeline in the repo. DONE.
 Week 3 - Skeleton pipeline, work in parallel
 Computational: build a skeleton transition-matrix pipeline - bin positions into a grid, count transitions between cells over a chosen time lag. It can run on dummy or heavily subsampled data; the point is that something produces transition-matrix-shaped output for the other streams to build against.
 Quantitative: finalise the statistical approach (Bayesian shrinkage vs. bootstrap, or both) and start designing it against the skeleton output -  shouldn't need the full-resolution pipeline to start this design work.
