@@ -1,31 +1,43 @@
 DATA3001 Group Project Plan - Global Drifter Program
-Team: 5 members (2 computational, 2 quantitative, 1 business). Client: Shane Elipot, University of Miami - built the GDP hourly dataset Term at a glance: Week 1 (now) region selection → Week 4 proposal/README (15%) → Week 5 poster (20%, includes peer review of two other groups) → Week 10 presentation (10% group + 15% individual) → Exam period final report (40%, ≤30 pages)
+Team: 5 members (2 computational, 2 quantitative, 1 business). Client: Shane Elipot, University of Miami - built the GDP dataset 
+Term at a glance: Week 4 proposal/README (15%) → Week 5 poster + peer revieww (20%) → Week 10 presentation (10% group + 15% individual) → Week 11 final report (40%)
 
-1. Recommended project direction: "Where things end up"
-This maps directly onto starting project 3.2.2 in the GDP overview document: given something entering the water at a point in region R, where has the surface flow taken it a week, a month, a year later? The deliverable is a surface-transport operator (a transition matrix or equivalent) that another analyst could load and iterate forward.
+1. Project starting place: "Where things end up"
+Lifted from the intro lecture: given something entering the water at a point in region R, where has the surface flow taken it a week, a month, a year later? 
+The deliverable is a surface-transport operator (a transition matrix or equivalent) that another analyst could load and iterate forward.
 Justification:
-It naturally decomposes into three layers that build on each other rather than sitting side by side: an engineering layer (build the gridded transition estimates from 16GB of ragged, unevenly-sampled data), a statistical layer (the transition estimates are unreliable where drifters are sparse - this needs real inferential work, not just descriptive stats), and an interpretive layer (what the resulting connectivity pattern means and to whom).
-It has a genuine, non-trivial statistics problem baked in: drifters cluster where the flow converges and thin out where it diverges, so raw cell-by-cell transition counts are noisy and biased toward well-sampled regions. Smoothing/regularising this defensibly is exactly what MATH3871 (Bayesian Inference and Computation) and MATH3821 (Statistical Modelling and Computation) are for.
+It naturally splits into three streams that build on each other rather than existing separately: 
+    - a computational layer (build the gridded transition estimates from 16GB of ragged, unevenly-sampled data)
+    - a statistical layer (the transition estimates are unreliable where drifters are sparse → inferential work, not just descriptive stats)
+    - a business layer (what the resulting connectivity pattern means and to whom).
+Genuine, non-trivial statistics problem baked in: drifters cluster where the flow converges and thin out where it diverges, so raw cell-by-cell transition counts are noisy and biased toward well-sampled regions. 
+Smoothing/regularising this defensibly is exactly what MATH3871 (Bayesian Inference and Computation) and MATH3821 (Statistical Modelling and Computation) are for.
 It gives the business student a bounded, well-defined analytical seat (translating connectivity + uncertainty into a real-world risk/economic narrative) rather than an open-ended one.
-Not locked into this - the lecture slides are explicit that projects are "guidelines towards a minimally viable product" and  may evolve from the starting point. But it's a strong fit for stream mix, so this plan is built around it.
-Build in one extension from the start: the GDP overview document notes that "predicting where a drifter goes next" (starting project 3.2.4) differs from "where things end up" only in scale - a single drifter's near-term path versus the whole field's transport pattern. Transition matrix implicitly makes point predictions, so comparing those against the persistence and mean-flow baselines described in 3.2.4 is a coherent, low-cost add-on: it gives a second, independent way to demonstrate main product actually works, rather than asking the reader to take the transition matrix on faith.
+Not locked into this - projects are "guidelines towards a minimally viable product" and  may evolve from the starting point. But it's a strong fit for stream mix, so this plan is built around it.
+Build in one extension from the start: the GDP overview document notes that "predicting where a drifter goes next".
+Differs from "where things end up" only in scale; a single drifter's near-term path versus the whole field's transport pattern. 
+Transition matrix implicitly makes point predictions, so comparing those against the persistence and mean-flow baselines is a coherent, low-cost add-on.
+It gives a second, independent way to demonstrate main product actually works, rather than asking the reader to take the transition matrix on faith.
 
 2. Region selection - CONFIRMED: Benguela Current (Namibia/Angola coast), box extended west across the South Atlantic towards South America
-Per the course material, region R must be justified on two grounds: data availability (course benchmark ≈1M+ observations, cited by the lecturer in person; the example regions given carry 0.8–3.9 million observations and 363–1,106 drifters) and economic/scientific/geopolitical significance. The Benguela Current is listed as a course example region (data-rich) and is significant now on two fronts: active offshore oil exploration (Namibia/Angola discoveries have been major energy-sector news) and an economically important upwelling fishery under environmental stress. Extending the box west towards South America brings in the Brazil-Malvinas confluence dynamics and broader South Atlantic circulation, giving the transition-matrix work a genuinely basin-scale connectivity question rather than a single coastal strip. Cannot choose the East Australian Current (it's the lecturer's worked example).
-Other course example regions considered and set aside: Kuroshio Current (East China Sea/off Japan-Taiwan - Taiwan Strait geopolitical relevance, major shipping/fisheries corridor) and the Gulf Stream (AMOC weakening attention, transatlantic shipping/climate relevance). All are data-rich course examples but Benguela + extended South Atlantic box was chosen for the stronger significance case and connectivity story.
-Still to do (first repo commit, Week 1): count actual observations and distinct drifters for the exact extended box - don't assume the course's 0.8-3.9M range applies unchanged, since box size changes the count substantially. This is also a mandatory part of the Week 4 README ("a region data-adequacy check").
+Per the course material, region R must be justified on two grounds: data availability (course benchmark ≈1M+ observations, cited by Lachland in person; the example regions given carry 0.8–3.9 million observations and 363–1,106 drifters) and economic/scientific/geopolitical significance. 
+The Benguela Current is listed as a course example region (data-rich) and is significant now on two fronts: active offshore oil exploration (Namibia/Angola discoveries have been major energy-sector news) and an economically important upwelling fishery under environmental stress. 
+Extending the box west towards South America brings in the Brazil-Malvinas confluence dynamics and broader South Atlantic circulation, giving the transition-matrix work a genuinely basin-scale connectivity question rather than a single coastal strip. 
+Cannot choose the East Australian Current (it's Lachlan's worked example).
+Other course example regions considered and set aside: Kuroshio Current (East China Sea/off Japan-Taiwan - Taiwan Strait geopolitical relevance, major shipping/fisheries corridor) and the Gulf Stream (AMOC weakening attention, transatlantic shipping/climate relevance). 
+All are data-rich course examples but Benguela + extended South Atlantic box was chosen for the stronger significance case and connectivity story.
+Before end of Week 1: First repo commit, count actual observations and distinct drifters for the exact extended box - don't assume the course's 0.8-3.9M range applies unchanged, since box size changes the count substantially. Mandatory part of the Week 4 README ("a region data-adequacy check").
 Process: document both justifications (data + significance) in the repo README from day one.
 
 3. How the three streams integrate into one pipeline
 Rather than three disconnected sub-projects, structure the work as a single pipeline with three stages, one per stream's strength:
 Computational stream          Quantitative stream              Business stream
-──────────────────────        ──────────────────────           ──────────────────────
-Build the data pipeline  ──▶  Estimate transition          ──▶  Translate connectivity +
-and gridded transition         probabilities properly,           uncertainty into a
-counts from the raw            with defensible uncertainty       real-world narrative:
-16GB ragged array               where sampling is thin            economic exposure,
-                                                                   seasonal risk windows,
-                                                                   report/poster framing
+Build the data pipeline  ──▶  Estimate transition         ──▶  Translate connectivity +
+and gridded transition        probabilities properly,          uncertainty into a
+counts from the raw           with defensible uncertainty      real-world narrative:
+16GB ragged array             where sampling is thin           economic exposure,
+                                                                seasonal risk windows,
+                                                                report/poster framing
 
 This means downstream streams depend on upstream ones being at least skeleton-complete early (see the sequencing risk in  private notes) - plan a rough end-to-end pipeline on dummy/subsampled data as soon as possible, so quantitative and business work isn't blocked waiting for a "finished" pipeline.
 
@@ -35,62 +47,72 @@ Build the data access + wrangling pipeline: lazily loading the Zarr store via cl
 Implement the spatial gridding and transition-matrix construction (binning drifter positions into cells, counting transitions between cells over chosen time lags) - COMP3121 (Algorithm Design) for making this efficient at scale, COMP2521/COMP2041 for a clean, testable, version-controlled codebase.
 Represent the transition matrix as a directed graph where useful (which cells are reachable from which, absorbing "coastline" states) - a natural application of MATH1081 (Discrete Mathematics) graph theory, and a nice bridge to COMP9417 (Machine Learning) if  want a supplementary predictive baseline later.
 Own COMP3311 (Database Systems) aspects of structuring intermediate outputs so the quantitative stream can query them without re-running the whole pipeline.
-Quantitative stream (2 people, including the double-major who can flex into computational work)
+
+Quantitative stream (2 people)
 Own the core statistical problem: raw cell-to-cell transition counts are unreliable wherever drifters are sparse, and sparsity itself is not random (drifters gather where flow converges). This needs regularisation, not a raw frequency table.
-MATH3871 (Bayesian Inference and Computation): put a prior over transition probabilities and borrow strength across neighbouring cells (hierarchical/empirical Bayes shrinkage). Don't stop at applying it - quantify how much it changes the picture: report how far the naive (unregularised) transition estimates drift from the regularised ones in the sparsest cells, and run a sensitivity check on how much the choice of prior strength affects the conclusions. That comparison is what turns "we used a Bayesian method" into a demonstrated result.
+MATH3871 (Bayesian Inference and Computation): put a prior over transition probabilities and borrow strength across neighbouring cells (hierarchical/empirical Bayes shrinkage). 
+Don't stop at applying it - quantify how much it changes the picture: report how far the naive (unregularised) transition estimates drift from the regularised ones in the sparsest cells, and run a sensitivity check on how much the choice of prior strength affects the conclusions. 
+That comparison is what turns "we used a Bayesian method" into a demonstrated result.
 MATH2801 (Theory of Statistics): formal treatment of the estimators and their properties.
 MATH3821 (Statistical Modelling and Computation): bootstrap/resampling-based uncertainty quantification as a complement or check on the Bayesian approach.
 MATH2501 (Linear Algebra): eigen-decompose the transition matrix for its stationary distribution and mixing time - where does material end up in the long run, are there near-absorbing "sink" cells, how fast does the system forget its starting point. This is a strong, visual result for the poster, not just a theoretical aside.
 MATH2871 (Data Management for Statistical Analysis): the statistical-side data wrangling once the computational stream hands off gridded output.
-Business stream (1 person - scope deliberately bounded to one clear seat)
-Own the "why this matters" case for the region (feeds the README and report background), grounded in literature as the past-student document recommends.
-Own one clearly scoped analytical contribution: apply ECON2209 (Business Forecasting) techniques to the seasonal structure of the transition estimates - do connectivity patterns shift predictably by season? Treat this as a real forecasting exercise with a train/test split (e.g. forecast one year's seasonal pattern having only seen prior years), not a descriptive seasonal chart. Then quantify what a validated seasonal risk window is actually worth to a real decision-maker (e.g. spill-response planning, fisheries larvae dispersal, shipping risk) - a specific, defensible framing beats a general one. This is a bounded, well-defined task appropriate for one person's capacity, not an open brief.
-Lead the translation of the modelling output into the non-technical narrative for the report's executive summary, poster and presentation - the past-student document is explicit that this needs to be written "for aliens," and that's a genuinely valuable, proportionate role for one person rather than asking them to match five people's technical output.
+
+Business stream (1 person)
+"Why this matters" case for the region (feeds the README and report background), grounded in literature as the past-student document recommends.
+Own one clearly scoped analytical contribution: apply ECON2209 (Business Forecasting) techniques to the seasonal structure of the transition estimates - do connectivity patterns shift predictably by season? 
+Treat this as a real forecasting exercise with a train/test split (e.g. forecast one year's seasonal pattern having only seen prior years), not a descriptive seasonal chart. 
+Then quantify what a validated seasonal risk window is actually worth to a real decision-maker (e.g. spill-response planning, fisheries larvae dispersal, shipping risk) - a specific, defensible framing beats a general one. 
+Lead the translation of the modelling output into the non-technical narrative for the report's executive summary, poster and presentation.
+The past-student document is explicit that this needs to be written "for aliens," and that's a genuinely valuable, proportionate role for one person rather than asking them to match five people's technical output.
 ECON2206/ECON3208/ECON3210 (introductory/applied/big-data econometrics) can inform how the forecasting and validation are framed and diagnosed, without duplicating the quantitative stream's inferential work.
-Single-point-of-failure mitigation: the business stream owns the literature/significance case, the ECON2209 forecasting analysis, and the non-technical narrative - three deliverables on one person. Since the forecasting analysis is largely quantitative/computational in nature, the quantitative and computational streams will provide backup support on that specific task (train/test split design, sanity-checking the forecast against the transition-matrix output) to soften the load, without taking ownership of it away from the business stream.
+Single-point-of-failure mitigation: the business stream owns the literature/significance case, the ECON2209 forecasting analysis, and the non-technical narrative - three deliverables on one person. 
+Since the forecasting analysis is largely quantitative/computational in nature, the quantitative and computational streams will provide backup support on that specific task (train/test split design, sanity-checking the forecast against the transition-matrix output) to soften the load, without taking ownership of it away from the business stream.
 
 5. Ten-week timeline - detailed
-Each week below lists what's due, what each stream is doing, what depends on what, and the concrete output the week should end with. Where a week's quant/business work depends on something upstream, that's called out explicitly - these are the points where the whole team should check in, not just the responsible stream.
-Week 1 (now) - Region confirmed, setup
+Each week below lists what's due, what each stream is doing, what depends on what, and the concrete output the week should end with. 
+Where a week's quant/business work depends on something upstream, that's called out explicitly. 
+These are the points where the whole team should check in, not just the responsible stream.
+
+Week 1 - Region confirmed, setup
 Deadline: region R decided by end of this week - DONE: Benguela Current, box extended west towards South America.
-Whole team: check real observation/drifter counts for the exact extended box (not the course's example figures - those were for someone else's box), set up the shared repo, every member commits at least once, lecturer invited as collaborator.
+Whole team: check real observation/drifter counts for the exact extended box (not the course's example figures - those were for someone else's box), set up the shared repo, every member commits at least once, Lachlan invited as collaborator.
 Computational: lead the data-adequacy count (this is a data-access task) and get the raw dataset loading at all, even slowly.
 Quantitative: sanity-check the data-adequacy numbers statistically (is the observation count actually enough given how it's distributed across the box, not just the raw total).
 Business: start the literature/significance case for the Benguela + South Atlantic box now that the region is locked in.
-Dependency: nothing downstream can start in earnest until the real observation/drifter count is confirmed - this is the one week where a delay costs the whole team, not just one stream.
+Dependency: nothing downstream can start in earnest until the real observation/drifter count is confirmed.
 Output: region logged in the README with both the data-adequacy numbers and the significance case.
 Week 2 - Working data access
 Computational: get the pipeline working end-to-end on a subsample of region's data - doesn't need to be fast or final, needs to run without crashing. Produce a coverage map (where/when drifters were present in R).
 Quantitative: initial EDA on the same subsample - distribution of observations across cells, an early look at where sparsity is going to bite.
 Business: continue literature review; start drafting the significance section of the README.
-Dependency: quantitative EDA depends on computational handing over something, even crude - flag early if this slips.
+Dependency: quantitative EDA depends on computational handing over something, even crude.
 Output: drifter counts/coverage map for R; a running (if crude) pipeline in the repo.
 Week 3 - Skeleton pipeline, work in parallel
 Computational: build a skeleton transition-matrix pipeline - bin positions into a grid, count transitions between cells over a chosen time lag. It can run on dummy or heavily subsampled data; the point is that something produces transition-matrix-shaped output for the other streams to build against.
 Quantitative: finalise the statistical approach (Bayesian shrinkage vs. bootstrap, or both) and start designing it against the skeleton output -  shouldn't need the full-resolution pipeline to start this design work.
 Business: literature review and significance write-up should be largely done; start scoping the seasonal-forecasting question specifically (what data will it need once available).
-Dependency: this is the week that determines whether Weeks 6–8 run smoothly. If the computational stream can't produce any skeleton output by the end of this week, quantitative work stalls - raise it immediately rather than waiting to see if it resolves itself.
-Liam away for this week but working remotely - good timing, since this is design/planning-heavy work for the quantitative stream rather than pair-coding-dependent.
+Liam away for this week but working remotely.
 Output: an end-to-end (if crude) skeleton, so no stream is blocked waiting on a "finished" pipeline.
 Week 4 - Proposal due
 Deadline: README/proposal due (15%).
-Whole team: the proposal needs the project pitch (question + why it matters + proposed methods), the region data-adequacy check, any preliminary results, and a clear, explicit allocation of work across the group - this last part is graded, not optional detail.
+Whole team: the proposal needs the project pitch (question + why it matters + proposed methods), the region data-adequacy check, any preliminary results, and a clear, explicit allocation of work across the group.
 Computational: get the pipeline producing real (if coarse-resolution) transition-matrix output - this is the "preliminary analysis/results" the README needs.
 Quantitative + Business: contribute their sections of the proposal (methods, significance case) using real output where available.
 Public holiday Monday falls here
-Dependency: the proposal's "preliminary results" requirement is the first hard test of whether Week 3's skeleton pipeline actually produced something usable - if it didn't, this week gets much harder.
+Dependency: the proposal's "preliminary results" requirement is the first hard test of whether Week 3's skeleton pipeline actually produced something usable.
 Output: README/proposal submitted.
 Week 5 - Poster
-Deadline: Poster session (20%, includes peer review of two other groups) - weighting confirmed.
-Whole team: poster should show the coarse-resolution transition-matrix result from Week 4, honestly framed as a work-in-progress rather than a finished product.
-Whoever presents: be ready for real questions from Shane Elipot and staff - know the method well enough to defend it, not just describe it.
-Whole team (separately): structured written peer review of two other groups' posters - at least one strength, one concrete improvement each. This is itself assessed, so don't treat it as an afterthought.
+Deadline: Poster session (20%, includes peer review of two other groups).
+Whole team: poster should show the coarse-resolution transition-matrix result from Week 4, framed as a work-in-progress rather than a finished product.
+Be ready for real questions from Shane Elipot and staff - know the method well enough to defend it, not just describe it.
+Whole team (separately): structured written peer review of two other groups' posters.
 Output: poster delivered; two peer reviews submitted.
 Week 6 - Incorporate feedback, start real inference
 Computational: address any pipeline issues surfaced by poster prep or feedback; move toward finer grid resolution if the coarse one was a limiting factor.
-Quantitative: begin the Bayesian/bootstrap uncertainty modelling in earnest - this is the technical core of the project, and the week where the sparsity problem starts getting a real, defensible answer rather than a placeholder.
+Quantitative: begin the Bayesian/bootstrap uncertainty modelling in earnest - technical core of the project, and the week where the sparsity problem starts getting a real, defensible answer rather than a placeholder.
 Business: start on the seasonal-forecasting analysis now that finer-resolution transition data should be available.
-Dependency: quantitative's uncertainty modelling and business's forecasting both need the computational stream's finer-resolution output - if that's not ready, both streams risk working against stale data. Check in explicitly at the start of this week on whether the pipeline has actually moved past the Week 4 coarse version.
+Dependency: quantitative's uncertainty modelling and business's forecasting both need the computational stream's finer-resolution output.
 Output: working transition estimates with genuine uncertainty quantification on at least a subset of cells, incorporating poster feedback.
 Week 7 - Full modelling
 Quantitative: complete the uncertainty modelling across the full grid, not just a subset; run the naive-vs-regularised comparison and the prior-sensitivity check.
@@ -99,15 +121,13 @@ Business: continue the seasonal forecasting work, including the train/test split
 Dependency: quantitative's full-grid modelling depends on the pipeline handling full-scale computation without breaking - this is where the Week 3–4 engineering choices either pay off or become a bottleneck.
 Output: a draft "product" - the transition operator plus its uncertainty, in a form another analyst could pick up and use.
 Week 8 - Robustness
-Computational + Quantitative jointly: rerun the full pipeline at multiple grid resolutions and time lags, and confirm the code runs unchanged when pointed at a different region (the "nothing should depend on R" requirement) - this needs both streams because it touches both the engineering and the statistical assumptions.
+Computational + Quantitative jointly: rerun the full pipeline at multiple grid resolutions and time lags, and confirm the code runs unchanged when pointed at a different region (the "nothing should depend on R" requirement).
 Business: finalise the seasonal-forecasting narrative and start drafting how it will be framed in the report.
-Dependency: this week only works if Weeks 6–7 delivered a genuinely working full-scale pipeline - if either stream is still catching up, robustness testing is the first thing to slip, and it's the one that reviewers/markers notice most if it's missing or thin.
 Output: a robustness/sensitivity section showing results across multiple parameter choices, not a single configuration.
 Week 9 - Report drafting
 Whole team: first full report draft - background, methods, findings, recommendations, following the structure the past-student document recommends (including an honest "plan vs. what actually happened" section).
 Business: lead the executive summary and non-technical framing; make sure the technical sections are readable by someone outside the team.
 Whole team: presentation structure drafted in parallel.
-Dependency: report quality here depends on Weeks 6–8 having produced real, checked results - this week is drafting and integration, not new analysis; if analysis is still incomplete, that's a signal to scope down rather than rush new work into the report.
 Output: first full report draft; presentation outline.
 Week 10 - Presentation
 Deadline: Group presentation (10% group + 15% individual).
@@ -120,10 +140,11 @@ Output: final report submitted.
 
 
 6. Working norms
-Shape the repo early and have every member commit in Week 1 (the lecturer needs to be invited as a collaborator).
+Shape the repo early and have every member commit in Week 1 (the Lachlan needs to be invited as a collaborator).
 Document delegated tasks and review weekly - the past-student advice and the course's individual-contribution assessment both point the same direction: an untracked division of labour is a liability, not just an inefficiency.
 No changes to the original provided data - all preprocessing should be code applied to the raw data, so the pipeline is reproducible.
 Nothing in the analysis should depend on which region R  picked - hand the code a different box and it should still run. Build this in from the start rather than retrofitting it before the final report.
 Log AI use as  go, not reconstructed at report time - the final report requires a critical reflection on AI's role in  product, and a running log (what was asked, what was checked/changed) is far more credible and easier to write from than a memory-based reconstruction in the exam period.
 Prepare for real domain questions at the poster session - Shane Elipot himself attends and will ask questions alongside staff. Whoever presents each component should be able to explain and defend the method to someone who knows this dataset intimately, not just present the result.
-No pre-committed fallback method for the transition-matrix/regularisation work - if it doesn't converge or produces unexpected results as they emerge (e.g. by Week 6-7), we'll deal with it at that point rather than forcing a fix now: document what was tried, why it didn't work, and report it as a defensible negative result per the course's own framing, rather than hiding it.
+No pre-committed fallback method for the transition-matrix/regularisation work - if it doesn't converge or produces unexpected results as they emerge (e.g. by Week 6-7), we'll deal with it at that point rather than forcing a fix now: 
+document what was tried, why it didn't work, and report it as a defensible negative result per the course's own framing, rather than hiding it.

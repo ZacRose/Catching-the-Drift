@@ -1,17 +1,17 @@
-"""Region data-adequacy count and a subsampled where/when coverage map.
+# coverage.py
+"""Region data-adequacy count and a subsampled coverage map.
 
 Week 1: count real observations and distinct drifters in region R.
 Week 2: run the pipeline end-to-end on a subsample of R's data and produce
 a coverage map (where/when drifters were present), without crashing.
-Region bounds come from config/region.yaml, not a hardcoded dict.
+Region bounds from config/region.yaml.
 """
 import os
-
 import numpy as np
 import matplotlib.pyplot as plt
 import yaml
 
-from src.ingest.ingest import load_gdp
+from src.ingest.load import load_gdp
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REGION_CONFIG = os.path.join(REPO_ROOT, "config", "region.yaml")
@@ -25,7 +25,9 @@ def load_region_bounds(yaml_path=REGION_CONFIG):
 
 
 def in_box(lon, lat, region):
-    """Region-agnostic filter: handles both longitude conventions and dateline-crossing boxes."""
+    """Filter independent of region.
+    Handles latitude and longitude conventions and dateline-crossing boxes.
+    """
     lon_norm = ((lon + 180) % 360) - 180
     lon_min, lon_max = region["lon_min"], region["lon_max"]
     if lon_min <= lon_max:
@@ -36,11 +38,10 @@ def in_box(lon, lat, region):
 
 
 def region_mask_and_owners(ds, region):
-    """In-box observation indices, and which drifter each one belongs to.
+    """Observation indices in regions, and which drifter each one belongs to.
 
-    Uses searchsorted, not reduceat: reduceat falls back to a neighboring
-    drifter's value instead of 0 for zero-rowsize drifters (confirmed bug,
-    see logs/quality_control_review_2026-09-22.md) — searchsorted doesn't.
+    Uses searchsorted (reduceat falls back to a neighboring drifter's value instead of
+    0 for zero-rowsize drifters).
     """
     lon = ds["lon"].values
     lat = ds["lat"].values
@@ -65,7 +66,7 @@ def subsample_by_drifter(idx_true, owner, n_drifters_sample=200, seed=0):
 
 
 def coverage_map(ds, region, sample_idx, out_path):
-    """Where (spatial density) and when (monthly counts) for the subsample."""
+    """Spatial density and monthly counts for the subsample."""
     lon = ds["lon"].values[sample_idx]
     lat = ds["lat"].values[sample_idx]
     time = ds["time"].values[sample_idx]
@@ -77,17 +78,17 @@ def coverage_map(ds, region, sample_idx, out_path):
     months = time.astype("datetime64[M]")
     unique_months, month_counts = np.unique(months, return_counts=True)
 
-    fig, (ax_where, ax_when) = plt.subplots(1, 2, figsize=(13, 5))
+    fig, (ax_where, ax_when) = plt.subplots(1, 2, figsize=(13,5))
 
     counts, _, _ = np.histogram2d(lon, lat, bins=[lon_edges, lat_edges])
-    mesh = ax_where.pcolormesh(lon_edges, lat_edges, counts.T, shading="auto", cmap="viridis")
-    fig.colorbar(mesh, ax=ax_where, label="observations per cell")
-    ax_where.set_title("Where: spatial coverage (subsample)")
+    mesh = ax_where.pcolormesh(lon_edges, lat_edges, counts.T, shading="auto")
+    fig.colorbar(mesh, ax=ax_where, label="Observations per cell")
+    ax_where.set_title("Spatial coverage in subsample")
     ax_where.set_xlabel("Longitude")
     ax_where.set_ylabel("Latitude")
 
     ax_when.bar(unique_months.astype(str), month_counts, width=1.0)
-    ax_when.set_title("When: monthly coverage (subsample)")
+    ax_when.set_title("Monthly coverage in subsample")
     ax_when.set_ylabel("Observations")
     tick_step = max(len(unique_months) // 12, 1)
     ax_when.set_xticks(range(0, len(unique_months), tick_step))
@@ -95,7 +96,7 @@ def coverage_map(ds, region, sample_idx, out_path):
 
     fig.tight_layout()
     os.makedirs(FIGURES_DIR, exist_ok=True)
-    fig.savefig(out_path, dpi=150)
+    fig.savefig(out_path)
     plt.close(fig)
 
 
@@ -109,8 +110,8 @@ if __name__ == "__main__":
     idx_true, owner = region_mask_and_owners(ds, region)
     n_obs = int(idx_true.size)
     n_drifters = int(np.unique(owner).size)
-    print(f"Observations in box: {n_obs:,}")
-    print(f"Distinct drifters in box: {n_drifters:,}")
+    print(f"Observations in R: {n_obs:,}")
+    print(f"Distinct drifters in R: {n_drifters:,}")
 
     sample_idx, n_sample_drifters = subsample_by_drifter(idx_true, owner)
     out_path = os.path.join(FIGURES_DIR, "coverage_map.png")
