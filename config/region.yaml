@@ -3,4 +3,4 @@ lat_min: -42
 lat_max: -4
 lon_min: -60
 lon_max: 20
-cell_size_deg: 1.0
+cell_size_deg: 2.0
