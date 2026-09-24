@@ -12,7 +12,6 @@ coverage.py computes which part of that long list belongs to each drifter.
 
 import clouddrift as cd
 
-
 def load_gdp():
     """Fetch the GDP hourly dataset from clouddrift's cloud-hosted copy.
 

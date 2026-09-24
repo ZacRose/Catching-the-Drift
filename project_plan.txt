@@ -78,6 +78,8 @@ Week 1 - Region confirmed, setup
 Deadline: region R decided by end of this week - DONE: Benguela Current, box extended west towards South America.
 Whole team: check real observation/drifter counts for the exact extended box (not the course's example figures - those were for someone else's box), set up the shared repo, every member commits at least once, Lachlan invited as collaborator.
 Computational: lead the data-adequacy count and get the raw dataset loading, even slowly. DONE: raw dataset loads via clouddrift (src/ingest/load.py); real count for the exact extended box confirmed against the live dataset.
+Quantitative: sanity-check the data-adequacy numbers statistically (is the observation count actually enough given how it's distributed across the box, not just the raw total).
+Business: start the literature/significance case for the Benguela + South Atlantic box now that the region is locked in.
 Dependency: nothing downstream can start in earnest until the real observation/drifter count is confirmed.
 Output: region logged in the README with both the data-adequacy numbers and the significance case.
 Week 2 - Working data access
