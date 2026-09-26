@@ -1,151 +1,130 @@
+"""
+adequacy.py
+
+Related task: Week 1 Quantitative - is the observation count actually enough given how
+it's distributed across the box, not just the raw total?
+
+A transition probability p out of a cell estimated from n independent drifters has
+standard error sqrt(p(1-p)/n), which is largest at p = 0.5. Requiring SE <= 0.05
+in that worst case gives 0.25/n <= 0.0025, i.e. n >= 100 (a 95% interval of about +/-0.10).
+The stricter target of a 95% interval of +/-0.05 (n >= 1.96^2 * 0.25 / 0.05^2 = 385) was
+considered and rejected; see project_plan.txt, Week 1.
+
+Distinct drifters stand in for independent samples: hourly readings from the same
+drifter are strongly correlated, so raw observation counts overstate the information.
+The per-transition count at a chosen lag replaces this proxy in Week 3.
+
+Each cell is judged on its own drifters only, i.e. the adequacy of the naive
+(unregularised) estimate. Borrowing strength from neighbouring cells is the job of the
+Week 6 shrinkage model, which reports its own effective sample size per cell.
+
+Runs the check at 1 to 5 degrees so the working grid (2) and coarse baseline (4) rest on evidence.
+Run: python3 -m src.inference.adequacy
+"""
+import csv
+import math
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
-from src.ingest.load import load_gdp
-from src.gridding.coverage import load_region_bounds, region_mask_and_owners
+from src.common.config import FIGURES_DIR, RESULTS_DIR, load_region_bounds
+from src.ingest.load import load_region
+from src.gridding.grid import grid_edges, cell_index, per_cell_counts
 
-# Define output path structure matching your coverage script
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-FIGURES_DIR = os.path.join(REPO_ROOT, "outputs", "figures")
+N_MIN = 100
+CELL_SIZES = [1.0, 2.0, 3.0, 4.0, 5.0]
 
-def get_grid_edges(region):
-    """Generates lat/lon grid edges safely handling the international date line."""
-    crossed_dateline = region["lon_min"] > region["lon_max"]
-    lon_min = region["lon_min"]
-    lon_max = region["lon_max"] + 360 if crossed_dateline else region["lon_max"]
 
-    step = region["cell_size_deg"]
-    lat_edges = np.arange(region["lat_min"], region["lat_max"] + step, step)
-    lon_edges = np.arange(lon_min, lon_max + step, step)
-    return lat_edges, lon_edges
+def drifter_grid(data, region, cell_size):
+    """Distinct drifters per cell as a 2-D (lat, lon) array, plus observations per cell (flat).
 
-def cell_index(lon, lat, region):
-    # Normalise lon (same way as src.gridding.coverage.in_box)
-    lon_norm = ((lon + 180) % 360) - 180
+    Inputs:
+        data: region readings from load_region().
+        region: dict from config/region.yaml.
+        cell_size: cell width in degrees.
+    Returns:
+        (drifter_counts_2d, obs_counts_flat).
+    """
+    cell, n_lat_cells, n_lon_cells = cell_index(data["lon"], data["lat"], region, cell_size)
+    obs_counts, drifter_counts = per_cell_counts(cell, data["drifter_id"], n_lat_cells * n_lon_cells)
+    return drifter_counts.reshape(n_lat_cells, n_lon_cells), obs_counts
 
-    crossed_dateline = region["lon_min"] > region["lon_max"]
-    if crossed_dateline:
-        lon_norm = np.where(lon_norm < 0, lon_norm + 360, lon_norm)
 
-    # Use the edge helper function
-    lat_edges, lon_edges = get_grid_edges(region)
+def adequacy_summary(drifter_counts, obs_counts, cell_size):
+    """One row of the resolution comparison table.
 
-    # Digitize, shift to 0-based, handle points exactly on lat_max/lon_max
-    lat_idx = np.digitize(lat, lat_edges) - 1
-    lon_idx = np.digitize(lon_norm, lon_edges) - 1
-    lat_idx = np.clip(lat_idx, 0, len(lat_edges) - 2)
-    lon_idx = np.clip(lon_idx, 0, len(lon_edges) - 2)
+    Cells with zero observations are treated as land. In this box they line up with the
+    African and South American coasts, so few if any are unsampled ocean.
+    """
+    ocean = drifter_counts[obs_counts > 0]
+    return {
+        "cell_size_deg": cell_size,
+        "ocean_cells": int(ocean.size),
+        "pct_cells_adequate": round(float(100 * np.mean(ocean >= N_MIN)), 1),
+        "median_drifters": int(np.median(ocean)),
+        "p10_drifters": int(np.percentile(ocean, 10)),
+    }
 
-    # Combine (lat_i, lon_i) into one flat cell id
-    n_lon_cells = len(lon_edges) - 1
-    n_lat_cells = len(lat_edges) - 1
-    cell_id = lat_idx * n_lon_cells + lon_idx
 
-    return cell_id, n_lat_cells, n_lon_cells
+def plot_adequacy(grids, summaries, region, out_path):
+    """One map per resolution, two per row, on a shared log colour scale so they compare directly."""
+    vmax = max(g.max() for g in grids)
+    n_rows = math.ceil(len(grids) / 2)
+    fig, axes = plt.subplots(n_rows, 2, figsize=(15, 3.4 * n_rows), layout="constrained")
+    axes = axes.ravel()[: len(grids)]
+    for spare in fig.axes[len(grids):]:
+        spare.axis("off")
 
-def per_cell_counts(cell, owner, n_cells):
-    df = pd.DataFrame({
-        "cell": cell,
-        "owner": owner
-    })
+    for ax, grid, row in zip(axes, grids, summaries):
+        lat_edges, lon_edges = grid_edges(region, row["cell_size_deg"])
+        mesh = ax.pcolormesh(
+            lon_edges, lat_edges, np.ma.masked_equal(grid, 0),
+            norm=colors.LogNorm(vmin=1, vmax=vmax), cmap="viridis",
+        )
+        # Contour on cell centres traces the boundary between adequate and thin cells
+        lon_centres = 0.5 * (lon_edges[:-1] + lon_edges[1:])
+        lat_centres = 0.5 * (lat_edges[:-1] + lat_edges[1:])
+        ax.contour(lon_centres, lat_centres, grid >= N_MIN, levels=[0.5], colors="black", linewidths=1.5)
+        ax.set_aspect("equal")
+        ax.set_title(
+            f"{row['cell_size_deg']:g}° cells: {row['pct_cells_adequate']}% of ocean cells adequate "
+            f"(median {row['median_drifters']} drifters)"
+        )
+        ax.set_xlabel("Longitude (°E)")
+        ax.set_ylabel("Latitude (°N)")
 
-    # Observations per cell
-    obs_counts = df.groupby("cell").size()
-    obs_counts = obs_counts.reindex(range(n_cells), fill_value=0)
+    fig.colorbar(mesh, ax=axes, label="Distinct drifters per cell (log scale)", shrink=0.6)
+    fig.suptitle(f"Data adequacy by grid resolution, {region['name']} box")
+    fig.text(
+        0.02, -0.04,
+        f"Black line encloses cells with at least {N_MIN} distinct drifters (worst-case SE of a "
+        "transition probability <= 0.05).\nBlank cells have no observations (land).",
+        fontsize=9,
+    )
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
 
-    # Distinct drifters per cell
-    drifter_counts = df.groupby("cell")["owner"].nunique()
-    drifter_counts = drifter_counts.reindex(range(n_cells), fill_value=0)
-
-    return obs_counts.values, drifter_counts.values
 
 if __name__ == "__main__":
     region = load_region_bounds()
-    ds = load_gdp()
-    idx_true, owner = region_mask_and_owners(ds, region)
+    data = load_region(region)
 
-    # Pull lon/lat for idx_true only
-    lon = ds.lon[idx_true]
-    lat = ds.lat[idx_true]
+    grids, summaries = [], []
+    for cell_size in CELL_SIZES:
+        grid, obs_counts = drifter_grid(data, region, cell_size)
+        grids.append(grid)
+        summaries.append(adequacy_summary(grid.ravel(), obs_counts, cell_size))
+        print(summaries[-1])
 
-    # Call the two functions, print the checks
-    cell, n_lat_cells, n_lon_cells = cell_index(lon, lat, region)
-    n_cells = n_lat_cells * n_lon_cells
-    obs_counts, drifter_counts = per_cell_counts(cell, owner, n_cells)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    table_path = os.path.join(RESULTS_DIR, "adequacy_by_resolution.csv")
+    with open(table_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=summaries[0].keys())
+        writer.writeheader()
+        writer.writerows(summaries)
 
-    print(f"Number of cells in grid: {n_cells}")
-    print(f"Sum of observations per cell: {obs_counts.sum()}")
-    print(f"Largest distinct drifter count: {drifter_counts.max()}")
-    print(f"Sum of distinct drifters per cell: {drifter_counts.sum()}")
-    print(f"Number of cells with zero observations: {np.sum(obs_counts == 0)}")
-
-    # Standard error for a transition probability:
-    # Solved sqrt(0.5*(1-0.5)/n) <= 0.05 -> 0.25/n <= 0.0025 -> n >= 100
-    N = 100
-
-    # Assume cells with no observations are likely land
-    ocean_drifter_counts = drifter_counts[obs_counts > 0]
-
-    # Calculate the percentage of ocean cells meeting our safety threshold
-    pass_rate = np.mean(ocean_drifter_counts >= N) * 100
-
-    # Calculate distribution metrics across the ocean cells
-    median_drifters = np.median(ocean_drifter_counts)
-    p10_drifters = np.percentile(ocean_drifter_counts, 10)
-
-    print(f"Percentage of ocean cells with >= {N} drifters: {pass_rate:.1f}%")
-    print(f"Median drifters per ocean cell: {median_drifters:.0f}")
-    print(f"10th percentile of drifters per ocean cell: {p10_drifters:.0f}")
-
-    # Reshape 1D arrays back into the 2D spatial grid map
-    drifter_grid = drifter_counts.reshape(n_lat_cells, n_lon_cells)
-
-    # Mask out the 0 cells because log scales cannot process them (or land)
-    masked_grid = np.ma.masked_equal(drifter_grid, 0)
-
-    # Pull the edges into the main function scope so the plotting block can use them
-    lat_edges, lon_edges = get_grid_edges(region)
-
-    # Plot drifter concentration map with logarithmic scale and contour line for threshold
-    fig, ax = plt.subplots(figsize=(10, 6))
-    mesh = ax.pcolormesh(
-        lon_edges, 
-        lat_edges, 
-        masked_grid, 
-        norm=colors.LogNorm(vmin=1, vmax=masked_grid.max()), 
-        cmap="viridis",
-        shading="auto"
-    )
-
-    # Add a boundary line showing where cells pass/fail the safety threshold
-    lon_centers = 0.5 * (lon_edges[:-1] + lon_edges[1:])
-    lat_centers = 0.5 * (lat_edges[:-1] + lat_edges[1:])
-    contour = ax.contour(
-        lon_centers, 
-        lat_centers, 
-        drifter_grid >= N, 
-        levels=[0.5], 
-        colors="red", 
-        linewidths=2
-    )
-
-    # Visual decorations and labeling
-    cbar = fig.colorbar(mesh, ax=ax, label="Distinct Drifters (Log Scale)")
-    ax.set_title(f"Data Adequacy Map (Red Line outlines cells with >= {N} Drifters)")
-    ax.set_xlabel("Longitude")
-    ax.set_ylabel("Latitude")
-
-    # Create a manual legend marker for our red contour lines
-    custom_line = [plt.Line2D([0], [0], color="red", lw=2)]
-    ax.legend(custom_line, [f"Adequate Data Threshold (N >= {N})"], loc="upper right")
-
-    fig.tight_layout()
-    os.makedirs(FIGURES_DIR, exist_ok=True)
-    out_path = os.path.join(FIGURES_DIR, "adequacy_map.png")
-    fig.savefig(out_path, dpi=300)
-    plt.close(fig)
-
-    print(f"Data adequacy map successfully generated and saved to {out_path}")
+    fig_path = os.path.join(FIGURES_DIR, "adequacy_map.png")
+    plot_adequacy(grids, summaries, region, fig_path)
+    print(f"Saved {table_path} and {fig_path}")

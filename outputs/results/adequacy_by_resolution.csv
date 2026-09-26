@@ -1,0 +1,6 @@
+cell_size_deg,ocean_cells,pct_cells_adequate,median_drifters,p10_drifters
+1.0,2338,5.5,53,13
+2.0,598,46.0,95,23
+3.0,279,67.0,129,30
+4.0,162,80.2,162,41
+5.0,105,81.0,202,52

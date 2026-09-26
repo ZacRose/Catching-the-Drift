@@ -39,7 +39,7 @@ counts from the raw           with defensible uncertainty      real-world narrat
                                                                 seasonal risk windows,
                                                                 report/poster framing
 
-This means downstream streams depend on upstream ones being at least skeleton-complete early (see the sequencing risk in  private notes) - plan a rough end-to-end pipeline on dummy/subsampled data as soon as possible, so quantitative and business work isn't blocked waiting for a "finished" pipeline.
+This means downstream streams depend on upstream ones being at least skeleton-complete early (see the sequencing risk in  private notes) - plan a rough end-to-end pipeline as soon as possible (a coarse 4 deg baseline on the full cached region, section 7), so quantitative and business work isn't blocked waiting for a "finished" pipeline.
 
 4. Task ownership by stream
 Computational stream (2 people)
@@ -78,50 +78,69 @@ Week 1 - Region confirmed, setup
 Deadline: region R decided by end of this week - DONE: Benguela Current, box extended west towards South America.
 Whole team: check real observation/drifter counts for the exact extended box (not the course's example figures - those were for someone else's box), set up the shared repo, every member commits at least once, Lachlan invited as collaborator.
 Computational: lead the data-adequacy count and get the raw dataset loading, even slowly. DONE: raw dataset loads via clouddrift (src/ingest/load.py); real count for the exact extended box confirmed against the live dataset.
-Quantitative: sanity-check the data-adequacy numbers statistically (is the observation count actually enough given how it's distributed across the box, not just the raw total).
+Quantitative: sanity-check the data-adequacy numbers statistically (is the observation count actually enough given how it's distributed across the box, not just the raw total). DONE: src/inference/adequacy.py checks distinct drifters per cell against N=100 (worst-case SE <= 0.05 for a transition probability) at 1 to 5 deg in one run (outputs/figures/adequacy_map.png, outputs/results/adequacy_by_resolution.csv). Ocean cells adequate: 1 deg 5.5% (median 53 drifters), 2 deg 46% (median 95), 3 deg 67% (median 129), 4 deg 80% (median 162), 5 deg 81% (median 202). 2 deg is the working grid and 4 deg the coarse baseline (section 7, decision 5); northeast (Angola/N. Namibia) is thin at every resolution, so coarsening alone doesn't fix it. N=100 kept over the 95%-CI version (N=385), see section 7, decision 3.
 Business: start the literature/significance case for the Benguela + South Atlantic box now that the region is locked in.
 Dependency: nothing downstream can start in earnest until the real observation/drifter count is confirmed.
 Output: region logged in the README with both the data-adequacy numbers and the significance case.
 Week 2 - Working data access
-Computational: get the pipeline working end-to-end on a subsample of region's data - doesn't need to be fast or final, needs to run without crashing. Produce a coverage map (where/when drifters were present in R). DONE: pipeline runs end-to-end (`python3 -m src.gridding.coverage`); coverage map (spatial + monthly) built from a 200-drifter subsample and saved to outputs/figures/coverage_map.png.
-Quantitative: initial EDA on the same subsample - distribution of observations across cells, an early look at where sparsity is going to bite.
+Computational: get the pipeline working end-to-end on a subsample of region's data - doesn't need to be fast or final, needs to run without crashing. Produce a coverage map (where/when drifters were present in R). DONE: region R's 19,269,758 readings (1,975 drifters) are extracted once and cached in data/interim/ by src/ingest/load.py, with a check that fails loudly on a partial cloud download (the cause of earlier run-to-run totals). Shared grid code in src/gridding/grid.py (unit tests in tests/). Coverage map (observations per cell + drifters active per month, full data) saved to outputs/figures/coverage_map.png via python3 -m src.gridding.coverage.
+Quantitative: initial EDA on the same subsample - distribution of observations across cells, an early look at where sparsity is going to bite. DONE (full data, 2 deg): src/inference/sparsity_eda.py - drifters per cell are spread fairly evenly (busiest 10% of cells hold 18%), but 99% of cells clear N=100 on raw hourly observations vs 46% on distinct drifters, so raw observation counts badly overstate adequacy; a drifter spends ~15 days in a 2 deg cell. src/inference/data_quality.py - (1) no missing positions/times, ve 0.06% missing, interpolation gaps short (99% under 3 h, max 12 h). (2) 68% of readings are from drifters that have lost their drogue; drogued-only data would leave 0.3% of 2 deg cells adequate. (3) Speed outliers (max 3.37 m/s) are real: the fastest 0.1% sit in the Agulhas and Brazil-Malvinas/Brazil Current systems and are barely more likely to be undrogued (72% vs 68%), so they are kept. (4) A median-speed drifter takes ~8/15/23/30 days to cross a 1/2/3/4 deg cell, which bounds the Week 3 lag from below. Decisions that came out of this EDA (drogued vs all drifters, all years vs 2010+) are logged in section 7.
 Business: continue literature review; start drafting the significance section of the README.
 Dependency: quantitative EDA depends on computational handing over something, even crude. Computational's output is now available for quantitative to start from.
 Output: drifter counts/coverage map for R; a running (if crude) pipeline in the repo. DONE.
-Week 3 - Skeleton pipeline, work in parallel
-Computational: build a skeleton transition-matrix pipeline - bin positions into a grid, count transitions between cells over a chosen time lag. It can run on dummy or heavily subsampled data; the point is that something produces transition-matrix-shaped output for the other streams to build against.
-Quantitative: finalise the statistical approach (Bayesian shrinkage vs. bootstrap, or both) and start designing it against the skeleton output -  shouldn't need the full-resolution pipeline to start this design work.
-Business: literature review and significance write-up should be largely done; start scoping the seasonal-forecasting question specifically (what data will it need once available).
+Week 3 - Transition table and coarse baseline, work in parallel
+Why this week exists: section 3 (no stream should wait on a "finished" pipeline) and the Modelling marking criteria ("plan the assessment first; start simple; validate"). Week 4's proposal needs preliminary results, so Week 3 must end with a real transition matrix, not a dummy one.
+Starting point: region R extracted and cached, every script runs on the full data in under 2 minutes; grid code shared and tested; adequacy, sparsity and data-quality EDA done; grid, N, baseline and drogue decisions made (section 7). No transition counting exists yet.
+No subsample: the original plan subsampled to avoid streaming 16GB on every run, and the region cache removed that cost (section 7, decision 4). Everything runs on all 19.3M readings; the unit tests use synthetic tracks.
 Liam away for this week but working remotely.
-Output: an end-to-end (if crude) skeleton, so no stream is blocked waiting on a "finished" pipeline.
+Computational - deliverable: src/gridding/transitions.py, tests/test_transitions.py, data/processed/transitions_tau15d.npz
+    1. Add each drifter's end_date and typedeath to the region extract in src/ingest/load.py (both are per-drifter variables in the GDP dataset, checked 2026-09-26). This forces one ~9 min rebuild of the cache.
+    2. build_transitions(data, tau_days): one row per start reading, taken once a day per drifter (hourly starts are near-copies of each other and would inflate counts 24x without adding information). Columns: drifter_id, start_time, start lon/lat, end lon/lat, drogued at start. The destination is the same drifter's reading exactly tau later:
+        - found in R: keep;
+        - not in R, but the drifter was still transmitting (end_date >= start + tau): it left the box, so mark it as an exit;
+        - drifter stopped before start + tau: drop the row (where it went is unknown).
+       Store positions, not cell ids, so one table serves every grid size and every drogue/year filter without a rebuild. Keep typedeath (1 = ran aground) for a possible coastline state in Week 6.
+    3. transition_counts(table, region, cell_size): count matrix of size (n_cells + 1) x (n_cells + 1) using grid.cell_index, with the extra row/column meaning "left R". Also return distinct drifters per start cell.
+    4. Tests on 2-3 hand-made tracks covering stay, move, exit and record ending early; normalised rows sum to 1.
+    5. tau is an argument, defaulting to 15 days (median drogued crossing time of a 2 deg cell, data_quality.py). Use the same tau at every grid size so resolution comparisons aren't confounded by the lag. At 4 deg most mass stays in its cell over 15 days, which is fine; Week 7 checks the Markov assumption directly.
+    6. Hand the table to Quant and Business by mid-week, then produce the 4 deg naive P (counts / row totals) and the 2 deg counts.
+Quantitative - deliverable: methods and evaluation paragraphs for the proposal, adequacy on transitions, one association figure
+    1. Settle the estimator. Recommended: Dirichlet-multinomial per start cell (inveestigate this), with each 2 deg row's prior centred on its 4 deg parent's row (the parent is the 2x2 block of neighbouring 2 deg cells, so this is exactly "borrowing strength from neighbours"). Prior strength is chosen on held-out drifters and then varied as the sensitivity check. A drifter-level bootstrap (MATH3821) gives a model-free interval to compare against. Do both: the comparison is itself a result (section 4).
+    2. Plan the assessment before fitting anything: split by drifter (e.g. 80/20 of drifter IDs, never by reading, since one drifter's transitions are correlated). Score each P by held-out log-likelihood of the test transitions, against the persistence baseline (stay in the same cell). The naive P gives probability 0 to transitions it never saw, which is the measurable case for shrinkage.
+    3. Redo the adequacy check on the transition table: distinct drifters starting a transition in each cell at 2 and 4 deg, tau = 15 days. This replaces the Week 1 proxy in the proposal.
+    4. EDA for "association with the response" (Data marking criteria): 15-day displacement by drogue status, by season and before/after 2010. One figure. It tests decisions 6 and 7 and gives Business a first look at seasonality.
+Business - deliverable: significance section draft, literature notes, seasonal scoping note
+    1. Draft the README significance section: who would use a Benguela transport map (spill response for Namibian/Angolan offshore oil, fisheries, marine debris), with citations.
+    2. Literature behind claims we have not verified: windage/slip of undrogued drifters; whether published drifter transition matrices use all drifters; typical lags (tau) used; whether any use hexagonal or equal-area cells; the width of the Benguela coastal upwelling strip. Use the lit-review agent to find papers, then read them.
+    3. Half-page scoping note for the seasonal forecast: define the seasons, define the quantity being forecast (e.g. share of material leaving the Benguela coastal cells northward within tau), check how many years each season has (coverage_map.png: thin before 2003). The transition table's start_time column is all the data it needs.
+Whole team: confirm section 7 at the Week 3 meeting; log AI use.
+Output: transition table, 4 deg naive P and 2 deg counts from real data; methods and evaluation design written; significance draft. The Week 4 proposal then needs write-up, not new analysis.
 Week 4 - Proposal due
 Deadline: README/proposal due (15%).
 Whole team: the proposal needs the project pitch (question + why it matters + proposed methods), the region data-adequacy check, any preliminary results, and a clear, explicit allocation of work across the group.
-Computational: get the pipeline producing real (if coarse-resolution) transition-matrix output - this is the "preliminary analysis/results" the README needs.
-Quantitative + Business: contribute their sections of the proposal (methods, significance case) using real output where available.
+Computational: preliminary results from the 4 deg baseline: maps of where material starting in the Benguela coastal cells is after tau, 3 months and 1 year (P, P^6, P^24).
+Quantitative + Business: methods (estimator, evaluation design, adequacy on transitions) and significance sections, using the real output from Week 3.
 Public holiday Monday falls here
-Dependency: the proposal's "preliminary results" requirement is the first hard test of whether Week 3's skeleton pipeline actually produced something usable.
+Dependency: the proposal's "preliminary results" requirement is the first hard test of whether Week 3's pipeline actually produced something usable.
 Output: README/proposal submitted.
 Week 5 - Poster
 Deadline: Poster session (20%, includes peer review of two other groups).
-Whole team: poster should show the coarse-resolution transition-matrix result from Week 4, framed as a work-in-progress rather than a finished product.
-Be ready for real questions from Shane Elipot and staff - know the method well enough to defend it, not just describe it.
+Whole team: poster shows the 4 deg baseline as the result so far, framed as a work in progress: "this is the whole-basin picture; next we go to 2 deg with shrinkage to resolve the coast".
+Be ready for real questions from Shane Elipot and staff - know the method well enough to defend it, not just describe it (expect: why these cells, why this lag, why keep undrogued drifters).
 Whole team (separately): structured written peer review of two other groups' posters.
 Output: poster delivered; two peer reviews submitted.
 Week 6 - Incorporate feedback, start real inference
-Computational: address any pipeline issues surfaced by poster prep or feedback; move toward finer grid resolution if the coarse one was a limiting factor.
-Quantitative: begin the Bayesian/bootstrap uncertainty modelling in earnest - technical core of the project, and the week where the sparsity problem starts getting a real, defensible answer rather than a placeholder.
-Business: start on the seasonal-forecasting analysis now that finer-resolution transition data should be available.
-Dependency: quantitative's uncertainty modelling and business's forecasting both need the computational stream's finer-resolution output.
-Output: working transition estimates with genuine uncertainty quantification on at least a subset of cells, incorporating poster feedback.
+Computational: address pipeline issues raised by poster feedback. Optional: a "ran aground" coastline state from typedeath (section 4, absorbing states).
+Quantitative: fit the 2 deg shrinkage model. Redraw the adequacy map with posterior effective sample size (drifters + prior strength) beside the naive per-cell count, which shows how much neighbour borrowing rescues the thin cells.
+Business: start the seasonal forecast from the transition table (it does not need to wait for finer-resolution output).
+Output: working 2 deg transition estimates with uncertainty on at least a subset of cells, incorporating poster feedback.
 Week 7 - Full modelling
-Quantitative: complete the uncertainty modelling across the full grid, not just a subset; run the naive-vs-regularised comparison and the prior-sensitivity check.
-Computational: support quantitative with any pipeline changes needed at scale (e.g. performance issues once uncertainty modelling runs across the whole grid).
-Business: continue the seasonal forecasting work, including the train/test split.
-Dependency: quantitative's full-grid modelling depends on the pipeline handling full-scale computation without breaking - this is where the Week 3–4 engineering choices either pay off or become a bottleneck.
+Quantitative: complete the model across the full grid; run the Week 3 evaluation (naive vs shrinkage vs persistence on held-out drifters) and the prior-sensitivity check. Check the Markov assumption: compare P(tau)^2 with P(2 tau) (Chapman-Kolmogorov). Stationary distribution and mixing time (MATH2501), divided by cell area when shown as a density.
+Computational: support quantitative with any pipeline changes needed at scale (e.g. the bootstrap refits P hundreds of times).
+Business: continue the seasonal forecast, including the train/test split.
 Output: a draft "product" - the transition operator plus its uncertainty, in a form another analyst could pick up and use.
 Week 8 - Robustness
-Computational + Quantitative jointly: rerun the full pipeline at multiple grid resolutions and time lags, and confirm the code runs unchanged when pointed at a different region (the "nothing should depend on R" requirement).
+Computational + Quantitative jointly: rerun across grid sizes (1/2/4 deg) and lags; drogue sensitivity (drogued vs undrogued transitions at 4 deg, where both have data); years sensitivity (2010+ only, a filter on start_time); confirm the code runs unchanged on a different region (the "nothing should depend on R" requirement). Optional, only if Week 7 finished on time: hexagonal cells as a cell-shape check (needs a new cell_index() and the h3 package).
 Business: finalise the seasonal-forecasting narrative and start drafting how it will be framed in the report.
 Output: a robustness/sensitivity section showing results across multiple parameter choices, not a single configuration.
 Week 9 - Report drafting
@@ -148,3 +167,12 @@ Log AI use as  go, not reconstructed at report time - the final report requires 
 Prepare for real domain questions at the poster session - Shane Elipot himself attends and will ask questions alongside staff. Whoever presents each component should be able to explain and defend the method to someone who knows this dataset intimately, not just present the result.
 No pre-committed fallback method for the transition-matrix/regularisation work - if it doesn't converge or produces unexpected results as they emerge (e.g. by Week 6-7), we'll deal with it at that point rather than forcing a fix now: 
 document what was tried, why it didn't work, and report it as a defensible negative result per the course's own framing, rather than hiding it.
+
+7. Decision log (settled 2026-09-26 after lecturer feedback; evidence in outputs/results/adequacy_by_resolution.csv and data_quality.py output)
+1. Cell shape - square lat/lon cells kept; hexagons not adopted. Hexagons (Uber's H3 system) have six equidistant neighbours and near-equal area on the sphere, but: transition probabilities are conditional on the start cell, so unequal cell areas don't bias them; the area effect here is modest (a 2 deg cell at 41S is 24% smaller than one at 5S) and is corrected by dividing by cell area wherever a result is read as a density; hexes add a dependency, polygon plotting and harder explanation for no change to the core method. Downstream code uses only flat cell ids, so a hex grid stays a one-function swap (Week 8 optional check).
+2. Neighbour-informed adequacy - the observation is right: the Week 1 check judges each cell on its own drifters. That is deliberate, because it measures the naive estimate, and the share of cells failing it is the size of the problem shrinkage has to solve. Pooling neighbours inside the adequacy check would need a pooling weight, which is exactly what the Week 6 model estimates, and pooling blindly across a current front (e.g. the Agulhas retroflection) would mix unlike flows. Neighbour borrowing is therefore built into the model (2 deg rows shrink toward their 4 deg parent) and shown as a before/after adequacy map in Week 6.
+3. Adequacy threshold - N=100 kept. Worst-case SE of a proportion is sqrt(0.25/n); SE <= 0.05 gives n >= 100 (95% interval about +/-0.10). The 95%-CI version, half-width <= 0.05, gives n >= 1.96^2 x 0.25 / 0.05^2 = 384.2, so 385. No 1-4 deg cell reaches 385 distinct drifters (1% at 5 deg), so that threshold marks every cell inadequate and carries no information about where the data can be trusted. Both are precision targets rather than tests; SE <= 0.05 is stated as ours.
+4. Runtime - why the original plan subsampled: streaming the ~16GB cloud store took ~10 minutes per run, too slow to develop against. load_region() now extracts R once (~9 min) and caches it, so every script runs on all 19.3M readings in under 2 minutes, and the Week 3 transition table is smaller again (~1 row per drifter-day). The subsample and the "full data later" week are dropped. Remaining runtime risks are the Week 7 bootstrap (hundreds of refits) and the Week 8 region swap (one new ~9 min extract per region).
+5. Coarse baseline - adopted, at 4 deg. The lecturer's suggestion: build the whole chain (transition matrix, long-run maps, narrative) first on large cells where almost every cell has enough data, so the project has a complete, defensible answer early, then refine. 4 deg because 80% of ocean cells are adequate (3 deg: 67%, 5 deg: 81%, so coarsening further buys almost nothing), and 4 deg cells nest exactly in the 2 deg and 1 deg grids (3 deg does not), which lets the baseline serve as the shrinkage prior for 2 deg (decision 2). Limitation stated up front: 4 deg cells (~440 km) are too coarse to separate the coastal strip from open ocean, which is the reason to go to 2 deg. The 4 deg grid overhangs the box's northern edge by half a row.
+6. Drogue - all drifters are the main estimate; drogue status is kept per transition. Drogued-only data leaves 0.3% of 2 deg cells and 9% of 4 deg cells adequate, so it cannot support a transition matrix at any useful resolution. 68% of readings are undrogued, and undrogued drifters feel the wind directly, which arguably suits floating material like oil and debris (Business to confirm from literature). The proposal states the product describes near-surface transport including direct wind effects; Week 8 compares drogued and undrogued transitions at 4 deg to size the difference.
+7. Years - all years as the main estimate (recommended; team to confirm in Week 3). Adequacy needs every drifter, and 2010+ becomes a Week 8 sensitivity check on start_time, with no rebuild needed.
