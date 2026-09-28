@@ -10,6 +10,7 @@ import yaml
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REGION_CONFIG = os.path.join(REPO_ROOT, "config", "region.yaml")
 INTERIM_DIR = os.path.join(REPO_ROOT, "data", "interim")
+PROCESSED_DIR = os.path.join(REPO_ROOT, "data", "processed")
 FIGURES_DIR = os.path.join(REPO_ROOT, "outputs", "figures")
 RESULTS_DIR = os.path.join(REPO_ROOT, "outputs", "results")
 
