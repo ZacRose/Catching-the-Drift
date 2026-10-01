@@ -49,7 +49,8 @@ def drogued_adequacy(data, region, cell_size):
 def plot_quality(data, speed, region, out_path):
     """Speed distribution by drogue status, and where the fastest readings occur."""
     drogued = data["drogue_status"]
-    fast = speed > np.nanquantile(speed, OUTLIER_QUANTILE)
+    threshold = np.nanquantile(speed, OUTLIER_QUANTILE)
+    fast = speed > threshold
     fig, (ax_speed, ax_where) = plt.subplots(1, 2, figsize=(14, 4.8), gridspec_kw={"width_ratios": [1, 1.4]})
 
     bins = np.linspace(0, np.nanmax(speed), 80)
@@ -69,9 +70,18 @@ def plot_quality(data, speed, region, out_path):
     ax_where.set_xlabel("Longitude (°E)")
     ax_where.set_ylabel("Latitude (°N)")
 
+    fig.suptitle(f"Drifter speeds and outliers, {region['label']}")
     fig.tight_layout()
+    fig.text(
+        0.01, -0.06,
+        f"Left: speed by drogue (sea anchor) status. {np.mean(~drogued):.0%} of readings come from drifters that "
+        f"have lost the drogue; dropping them would leave too few drifters per cell, so they are kept.\nRight: the fastest {1 - OUTLIER_QUANTILE:.1%} of readings (above {threshold:.2f} m/s) sit in "
+        "known fast currents (Brazil and Brazil-Malvinas off South America, Agulhas in the southeast corner),\n"
+        "so they are real flow, not errors, and are kept.",
+        fontsize=9,
+    )
     os.makedirs(FIGURES_DIR, exist_ok=True)
-    fig.savefig(out_path, dpi=200)
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -100,7 +110,8 @@ if __name__ == "__main__":
           f"(max {np.nanmax(speed):.2f} m/s), from {np.unique(data['drifter_id'][fast]).size} different drifters")
     print(f"  Undrogued: {np.mean(~drogued[fast]):.0%} of the fastest readings vs {np.mean(~drogued):.0%} overall")
 
-    print("Days for a typical (median-speed, drogued) drifter to cross one cell:")
+    # North-south crossing; east-west is a little quicker since longitude degrees shrink with latitude
+    print("Days for a median-speed drogued drifter to cross one cell north to south:")
     km_per_day = np.nanmedian(speed[drogued]) * 86.4
     for cell_size in CELL_SIZES:
         print(f"  {cell_size:g}°: {cell_size * KM_PER_DEG / km_per_day:.0f} days")

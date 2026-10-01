@@ -75,6 +75,11 @@ def extract_region(ds, region):
     del lon, lat  # ~1.6GB each; free before pulling the rest
     for var in EXTRA_VARS:
         data[var] = ds[var].values[idx]
+
+    # The same silent fill can hit the other variables: a cache that passed the lon/lat check
+    # had one ve chunk (10,944 readings) of NaN that the live dataset doesn't have
+    if np.isnan(data["ve"]).any() or np.isnan(data["vn"]).any() or np.isnat(data["time"]).any():
+        raise RuntimeError("Incomplete download (missing ve/vn/time chunks). Rerun on a stable connection.")
     return data
 
 

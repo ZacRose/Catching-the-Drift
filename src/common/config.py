@@ -16,6 +16,7 @@ RESULTS_DIR = os.path.join(REPO_ROOT, "outputs", "results")
 
 
 def load_region_bounds(yaml_path=REGION_CONFIG):
-    """Load region R's box (name, lat/lon limits, working cell size) from config/region.yaml."""
+    """Load region R from config/region.yaml: name (file names), label (figure titles),
+    lat/lon limits and the working cell size."""
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)

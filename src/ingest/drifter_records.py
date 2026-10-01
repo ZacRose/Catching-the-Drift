@@ -20,7 +20,7 @@ Why stretches rather than end_date: end_date is the DAC's "last good date", whic
 the last hourly reading (within 1 hour) for only 7% of R's drifters and is missing for some.
 It is kept for reference; the stretches decide whether a drifter was still reporting.
 
-Run: python3 -m src.ingest.drifter_records  (about 3-5 minutes the first time)
+Run: python3 -m src.ingest.drifter_records  (about a minute the first time)
 """
 import os
 import numpy as np
@@ -103,7 +103,7 @@ def load_records(region=None):
             return cached
 
     drifter_ids = np.unique(load_region(region)["drifter_id"])
-    print("Fetching drifter records from the cloud dataset (one-off, a few minutes)...")
+    print("Fetching drifter records from the cloud dataset (one-off, about a minute)...")
     records = extract_records(load_gdp(), drifter_ids)
     os.makedirs(INTERIM_DIR, exist_ok=True)
     np.savez(path, **records, **{k: region[k] for k in BOX_KEYS})

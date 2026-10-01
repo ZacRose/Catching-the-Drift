@@ -21,8 +21,13 @@ share can be reported and, with typedeath (1 = ran aground), a coastline state c
 added in Week 6.
 
 tau defaults to 15 days: the time a median-speed drogued drifter takes to cross a 2 degree
-cell (data_quality.py). The same tau is used at every grid size so that resolution
-comparisons aren't confounded by the lag.
+cell north to south (data_quality.py). The same tau is used at every grid size so that
+resolution comparisons aren't confounded by the lag.
+
+Loading the saved table (tau_days is a single number, not a column, so take it out before
+filtering rows):
+    table = dict(np.load("data/processed/transitions_tau15d.npz"))
+    tau_days = table.pop("tau_days")
 
 Run: python3 -m src.gridding.transitions
 """
@@ -35,6 +40,7 @@ from src.ingest.drifter_records import load_records
 from src.gridding.grid import grid_edges, cell_index, per_cell_counts
 
 TAU_DAYS = 15
+BASELINE_CELL_SIZE = 4.0  # the coarse baseline grid (project_plan.txt, decision 5)
 IN_R, LEFT_R, ENDED, GAP = 0, 1, 2, 3
 OUTCOME_NAMES = {IN_R: "stayed in R", LEFT_R: "left R", ENDED: "record ended", GAP: "gap in record"}
 
@@ -67,6 +73,10 @@ def build_transitions(data, records, tau_days=TAU_DAYS):
     """
     # Rank drifters 0..n-1 (IDs are too large to pack into a key directly)
     ids, rank = np.unique(data["drifter_id"], return_inverse=True)
+    # Drifter ranks are looked up in records by ID, so both caches must hold the same drifters
+    if not np.array_equal(ids, np.unique(records["traj_id"])):
+        raise ValueError("Region cache and records cache list different drifters; "
+                         "delete data/interim/*_records.npz and rerun.")
     hours = _hours(data["time"])
     keys = _key(rank, hours)
     order = np.argsort(keys, kind="stable")  # the cache is already in this order; don't rely on it
@@ -117,8 +127,9 @@ def _missing_destination_outcome(records, ids, drifter_rank, target_hours):
     seg_rank = np.searchsorted(ids, records["seg_id"])
     seg_start = _hours(records["seg_start"])
     seg_end = _hours(records["seg_end"])
-    seg_order = np.argsort(_key(seg_rank, seg_start))
-    seg_keys = _key(seg_rank, seg_start)[seg_order]
+    seg_keys = _key(seg_rank, seg_start)
+    seg_order = np.argsort(seg_keys)
+    seg_keys = seg_keys[seg_order]
 
     # The stretch that could contain the target is the last one starting at or before it
     i = np.searchsorted(seg_keys, _key(drifter_rank, target_hours), side="right") - 1
@@ -139,7 +150,8 @@ def transition_counts(table, region, cell_size=None):
     """Count start cell -> end cell transitions on a grid, with "left R" as an extra state.
 
     Inputs:
-        table: from build_transitions(), optionally filtered first, e.g. drogued rows only:
+        table: from build_transitions() (or loaded as in the module docstring), optionally
+               filtered first, e.g. drogued rows only:
                {k: v[table["drogued"]] for k, v in table.items()}.
         region: dict from config/region.yaml.
         cell_size: cell width in degrees (defaults to the working grid in region.yaml).
@@ -159,12 +171,15 @@ def transition_counts(table, region, cell_size=None):
 
     end_cell = np.full(start_cell.size, n_cells)  # default: the "left R" state
     in_r = table["outcome"][known] == IN_R
-    end_cell_in_r, _, _ = cell_index(table["end_lon"][known][in_r], table["end_lat"][known][in_r], region, cell_size)
+    end_lon = table["end_lon"][known][in_r]
+    end_lat = table["end_lat"][known][in_r]
+    end_cell_in_r, _, _ = cell_index(end_lon, end_lat, region, cell_size)
     end_cell[in_r] = end_cell_in_r
 
     # Count each (start, end) pair by flattening it to one index
     n_states = n_cells + 1
-    counts = np.bincount(start_cell * n_states + end_cell, minlength=n_states ** 2).reshape(n_states, n_states)
+    pair = start_cell * n_states + end_cell
+    counts = np.bincount(pair, minlength=n_states ** 2).reshape(n_states, n_states)
     _, start_drifters = per_cell_counts(start_cell, table["drifter_id"][known], n_cells)
     return counts, start_drifters
 
@@ -175,6 +190,9 @@ def row_normalise(counts):
     Rows with no transitions (land, or cells never sampled) are left as all zeros, so they
     are easy to spot and mask. "Left R" is made absorbing (P = 1 of staying there), since
     drifters aren't followed once they leave the box.
+
+    Caution for powers of P: a few counted moves end in a cell that has no row of its own
+    (39 of them at 4 degrees, tau = 15 days), so rows of P^n sum to slightly less than 1.
     """
     totals = counts.sum(axis=1, keepdims=True)
     P = np.divide(counts, totals, out=np.zeros(counts.shape), where=totals > 0)
@@ -206,18 +224,21 @@ if __name__ == "__main__":
         print(f"  {name}: {np.mean(table['outcome'] == code):.1%}")
     print(f"Saved {table_path}")
 
-    # 2 degree counts (the working grid, input to the Week 6 shrinkage model)
-    counts_2, drifters_2 = transition_counts(table, region, 2.0)
-    path_2 = os.path.join(PROCESSED_DIR, f"transition_counts_2deg_tau{TAU_DAYS}d.npz")
-    save_grid_result(path_2, region, 2.0, TAU_DAYS, counts=counts_2, start_drifters=drifters_2)
-    print(f"2 deg: {counts_2.sum():,} transitions counted; saved {path_2}")
+    # Counts on the working grid (input to the Week 6 shrinkage model)
+    fine = region["cell_size_deg"]
+    counts_fine, drifters_fine = transition_counts(table, region, fine)
+    path_fine = os.path.join(PROCESSED_DIR, f"transition_counts_{fine:g}deg_tau{TAU_DAYS}d.npz")
+    save_grid_result(path_fine, region, fine, TAU_DAYS, counts=counts_fine, start_drifters=drifters_fine)
+    print(f"{fine:g} deg: {counts_fine.sum():,} transitions counted; saved {path_fine}")
 
-    # 4 degree naive P (the coarse baseline)
-    counts_4, drifters_4 = transition_counts(table, region, 4.0)
-    P_4 = row_normalise(counts_4)
-    path_4 = os.path.join(PROCESSED_DIR, f"naive_P_4deg_tau{TAU_DAYS}d.npz")
-    save_grid_result(path_4, region, 4.0, TAU_DAYS, P=P_4, counts=counts_4, start_drifters=drifters_4)
-    sampled = counts_4[:-1].sum(axis=1) > 0
-    stay = np.diag(P_4)[:-1][sampled]
-    print(f"4 deg: {sampled.sum()} cells with transitions; median chance of still being in the "
-          f"same cell after {TAU_DAYS} days {np.median(stay):.2f}; saved {path_4}")
+    # Naive P on the coarse baseline grid
+    coarse = BASELINE_CELL_SIZE
+    counts_coarse, drifters_coarse = transition_counts(table, region, coarse)
+    P_coarse = row_normalise(counts_coarse)
+    path_coarse = os.path.join(PROCESSED_DIR, f"naive_P_{coarse:g}deg_tau{TAU_DAYS}d.npz")
+    save_grid_result(path_coarse, region, coarse, TAU_DAYS,
+                     P=P_coarse, counts=counts_coarse, start_drifters=drifters_coarse)
+    sampled = counts_coarse[:-1].sum(axis=1) > 0
+    stay = np.diag(P_coarse)[:-1][sampled]
+    print(f"{coarse:g} deg: {sampled.sum()} cells with transitions; median chance of still being in "
+          f"the same cell after {TAU_DAYS} days {np.median(stay):.2f}; saved {path_coarse}")
