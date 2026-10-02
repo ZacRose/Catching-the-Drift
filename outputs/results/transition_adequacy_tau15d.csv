@@ -1,0 +1,3 @@
+cell_size_deg,tau_days,ocean_cells,pct_adequate_week1_proxy,pct_adequate_transitions,median_drifters_week1_proxy,median_drifters_transitions,p10_drifters_transitions,median_transitions_per_drifter,ocean_cells_with_no_transitions,week1_proxy_source
+2.0,15,598,44.1,41.3,92,90,22,15.0,2,table
+4.0,15,162,80.2,78.4,159,155,38,29.8,1,table
