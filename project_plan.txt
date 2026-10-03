@@ -22,6 +22,17 @@ Key terms:
   statistical cleaning.
 - Shrinkage: blending data from many small cells (e.g. 1 degree) with little data to larger regions (e.g.
   4 degree cells) with more supporting data. 
+- Prior row / alpha: in our shrinkage model, a 2 deg cell's row starts from its 4 deg cell's row
+  (the "prior"). alpha says how much that prior counts, in made-up transitions: a cell with alpha
+  real transitions is half its own data, half its 4 deg cell.
+- Train / validation / test drifters: we hide some drifters while fitting P, then check how well
+  P predicts where they went. Validation drifters are used to pick settings such as alpha; test
+  drifters are only used once, for the final score.
+- Held-out log-likelihood: the score for that check. For each hidden transition, take the log of
+  the probability P gave to where the drifter actually went, and average. Closer to 0 is better;
+  a model that gave probability 0 to something that happened scores minus infinity.
+- Persistence baseline: the simplest possible forecast, "material stays in the cell it started
+  in". Any useful P should beat it.
 
 1. The project: "Where things end up"
 
@@ -53,7 +64,8 @@ Projects are "guidelines towards a minimally viable product", so this can change
    Atlantic to South America
 
 Box: latitude -42 to -4, longitude -60 to 20 (config/region.yaml).
-Justification for region (must be extended after region lit review):
+Justification for region (region lit review 2026-10-03:
+docs/literature/business_literature_review.md):
 - Data: the course benchmark is about 1M+ readings (Lachlan, in person); the example regions have
   0.8-3.9M readings and 363-1,106 drifters. Our box has 19,269,758 hourly readings from 1,975
   drifters, 1994-09-15 to 2022-10-31 (Week 1).
@@ -150,7 +162,8 @@ Week 2 - Working data access and EDA. DONE
         was one failed download chunk in a local cache (checked against the live data on
         2026-10-01); the extract now checks ve, vn and time as well as positions.
     (2) Drogue: 68% of readings come from drifters that have lost their drogue. Using drogued
-        readings only would leave 0.3% of 2 deg cells adequate (decision 6).
+        readings only would leave 0.3% of 2 deg cells adequate; undrogued readings only, 22.4%
+        (decision 6).
     (3) Speed outliers (max 3.37 m/s) are real: the fastest 0.1% sit in the Agulhas and the
         Brazil / Brazil-Malvinas currents, and are only slightly more likely to be undrogued
         (72% vs 68%), so they are kept.
@@ -207,40 +220,84 @@ data/interim/).
    median 15-day displacement is 153 km (about 0.12 m/s), in line with data_quality.py. Rebuilt
    from live data on 2026-10-01: identical, array for array.
 
-Quantitative - not yet done
-1. Choose the estimator. Recommended, still to investigate: a Dirichlet-multinomial for each start
-   cell, with each 2 deg row's prior centred on its 4 deg parent's row. The parent is the 2x2
-   block of neighbouring 2 deg cells, so this is exactly "borrowing strength from neighbours".
-   Choose the prior strength on held-out drifters, then vary it as the sensitivity check. A
-   drifter-level bootstrap (MATH3821) gives a model-free interval to compare against. Do both:
-   the comparison is a result in itself (section 4).
-2. Plan the assessment before fitting anything: split by drifter (e.g. 80/20 of drifter IDs),
-   never by reading, because one drifter's transitions are correlated. Score each P by the
-   held-out log-likelihood of the test transitions, against the persistence baseline (stay in the
-   same cell). Naive P gives probability 0 to moves it never saw, which is the measurable case
-   for shrinkage.
-3. Redo the adequacy check on the transition table: distinct drifters starting a transition in
-   each cell at 2 and 4 deg, tau = 15 days (the start_drifters array in both grid files). This
-   replaces the Week 1 proxy in the proposal.
-4. EDA for "association with the response" (marking criteria): 15-day displacement by drogue
-   status, by season and before/after 2010. Presented in a figure. It tests decisions 6 and 7 and gives
-   Business a first look at seasonality.
+Quantitative - DONE (2026-10-02, branch week3-shrinkage; reviewed and merged into week3-unified)
+Run, in this order: python3 -m src.inference.split, then src.inference.evaluate,
+src.inference.transition_adequacy and src.inference.displacement_eda (each under 2 minutes).
+All four read the Week 3 table through src/inference/transition_data.py, which keeps the rows
+with a known destination ("stayed in R" and "left R": 776,777 of 803,368) and drops the rest.
+1. Estimator chosen: shrinkage of each 2 deg row towards its 4 deg cell's row
+   (src/inference/estimators.py; the maths is a Dirichlet-multinomial, MATH3871). For
+   cell i:  p_ij = (n_ij + alpha x m_ij) / (n_i + alpha), where n are the cell's own counts and
+   m is the 4 deg row spread over its four 2 deg cells. Few drifters -> close to the 4 deg row;
+   many -> close to the cell's own counts. alpha was picked on the validation drifters:
+   alpha = 56 (figure: alpha_sensitivity.png, which also shows the test score for every alpha
+   as the prior-sensitivity check). The drifter-level bootstrap (the "do both" in the original
+   step) is not done yet; it is the Week 7 uncertainty check.
+2. Assessment designed and run before any final model (src/inference/split.py, evaluate.py).
+   Drifters, not rows, are split, because one drifter's daily transitions overlap: 64% train
+   (1,211 drifters), 16% validation (303), 20% test (378), fixed seed, saved in
+   outputs/results/drifter_split.csv so every later model is scored on the same test drifters.
+   Results (outputs/results/evaluation_tau15d.csv; higher = better, compare within a grid only):
+       grid   model                    test score   test moves given probability 0
+       4 deg  naive P                  -inf         0.06%   (-1.34 on the rest)
+       4 deg  persistence (eps 0.5)    -3.14        0%
+       2 deg  naive P                  -inf         0.76%   (-2.02 on the rest)
+       2 deg  persistence (eps 0.7)    -5.36        0%
+       2 deg  shrinkage to 4 deg       -2.07        0%
+   What this says: naive P fails outright at 2 deg, because 0.76% of real test moves were never
+   seen in training. Shrinkage never gives probability 0 and beats persistence by a wide margin.
+   On the moves naive P can score, shrinkage is very slightly worse (-2.024 vs -2.016), so its
+   gain so far comes entirely from the rare unseen moves. Read Week 4 open issues g-i before
+   quoting this as "shrinkage is better".
+3. Adequacy redone on the transitions (src/inference/transition_adequacy.py,
+   outputs/results/transition_adequacy_tau15d.csv, transition_adequacy_map.png). Counting
+   distinct drifters that start a 15-day move in each cell, instead of any reading:
+       2 deg: 41.3% of 598 ocean cells adequate (Week 1 check: 46.0%); median 90 drifters
+       4 deg: 78.4% of 162 ocean cells adequate (Week 1 check: 80.2%); median 155 drifters
+   These are the numbers for the proposal. The counts match the start_drifters arrays saved by
+   Computational exactly. A drifter starts about 15 moves per 2 deg cell (30 per 4 deg cell),
+   which is why drifters, not moves, are counted.
+4. Association with the response (src/inference/displacement_eda.py,
+   displacement_association.png, displacement_by_group_tau15d.csv). Median 15-day distance
+   travelled by drifters that stay in R:
+       drogued 127 km vs drogue lost 167 km   (decision 6: undrogued drifters move ~30% further)
+       by season 147-159 km                    (small; Business's seasonal story needs more than
+                                                distance, e.g. direction or exits)
+       before 2010 160 km vs 2010+ 149 km      (decision 7: small)
+   Caution: the groups also differ by where drifters were, so these are first looks, not
+   controlled comparisons. Drogue status is recorded at the start of each move only (issue e).
+Tests: tests/test_quant_week3.py, 8 tests on hand-made data (split by drifter, states, the
+4 deg parent of each 2 deg cell, shrinkage limits, displacement). 22 tests in the repo, all passing.
 
-Business - not yet done
-1. Help with the the README significance section: who would use a Benguela transport map (spill response
-   for Namibian/Angolan offshore oil, fisheries, marine debris), with citations.
-2. Literature for claims we haven't checked: how much wind pushes undrogued drifters
+Business -
+Done so far: a literature review of three sources (Hutchings et al. 2009 on the Benguela system;
+Drouin & Lozier 2019, who used GDP drifters to trace South Atlantic surface pathways; the
+Benguela Current Convention's list of economic activities) plus drafts of the background and
+significance sections. Files: docs/literature/business_literature_review.md,
+docs/report/background.md, docs/proposal/significance.md. Each has review notes from
+2026-10-03. The main fixes: drop "subsurface floats" from Drouin & Lozier; P can't say where
+drifters go after leaving the box, only how many leave; the drogue sentence should describe
+decision 6a; and the papers were checked from abstracts only (from AI Lit Review agent to cross-reference), 
+so double-check them before citing.
+Things to mention:
+1. Significance section: who would use a Benguela transport map (spill response
+   for Namibian/Angolan offshore oil, fisheries, marine debris), with citations. Offshore oil point 
+   needs a source, and the case for the client (Shane Elipot).
+2. Double-checking literature claims before submission: how much wind pushes undrogued drifters
    (windage/slip); whether published drifter transition matrices use all drifters; typical lags;
    whether anyone uses hexagonal or equal-area cells; how wide the Benguela coastal upwelling
-   strip is.
+   strip is. Partly answered by the 2026-10-03 AI searches (logs/ai_use_log.md): Novelli et al.
+   2020 on undrogued drifters and oil; Grodsky et al. 2011 on windage; van Sebille et al. 2012,
+   Maximenko et al. 2012 and McAdam & van Sebille 2018 on drifter transition matrices, which pool
+   drogued and undrogued drifters.
 3. Brief (e.g. half-page) scoping note for the seasonal forecast: define the seasons and the quantity being
    forecast (e.g. share of material leaving the Benguela coastal cells northward within tau), and
    check how many years each season has (coverage_map.png: thin before 2003). The start_time
    column of the transition table is all the data it needs.
 
 Whole team: confirm section 7 at the Week 3 meeting; log AI use.
-Output: transition table, 4 deg naive P and 2 deg counts from real data (DONE); methods and
-evaluation design written; significance draft. Week 4 then needs write-up, not new analysis.
+Output: transition table, 4 deg naive P and 2 deg counts from real data (DONE); estimator,
+evaluation design and first scores (DONE); significance draft. Week 4 then needs write-up, not new analysis.
 
 Week 4 - Proposal/README due (15%).
 - Whole team: the pitch (question, why it matters, methods), the region data-adequacy check,
@@ -266,6 +323,23 @@ Week 4 - Proposal/README due (15%).
      columns means rebuilding the table.
   f. The evidence for decision 8 and the brute-force check lives in this file and the AI log,
      not in code. If the proposal cites those numbers, put the checks in a script.
+- Open issues from the 2026-10-03 review of the Week 3 Quantitative work:
+  g. The persistence baseline is too easy to beat. Its best setting (eps = 0.7 at 2 deg) means
+     "stay with 30% probability, otherwise jump anywhere in the box", which isn't really
+     "material stays put". Beating it proves little. A fairer simple baseline is needed, e.g.
+     "stay or move only to a neighbouring cell", or the 4 deg row on its own.
+  h. Shrinkage is meant to help the thin cells, but the score averages over all test moves,
+     most of which start in well-sampled cells. Report the score separately for cells under and
+     over 100 drifters (adequacy map) to show where shrinkage actually helps.
+  i. The scores have no uncertainty yet. Before saying one model beats another, resample test
+     drifters (drifter-level bootstrap) to get an interval on each score. Same tool as issue c.
+  j. Units: the counts behind P are overlapping daily moves, about 15 per drifter per 2 deg cell.
+     So alpha = 56 made-up moves is worth only about 4 drifters, and Bayesian intervals built on
+     the raw counts would be too narrow (issue c again). Week 6's "effective sample size =
+     drifters + prior strength" mixes the two units; state both in drifters.
+  k. Say in the methods that the prior is built from the same training data (a cell's own moves
+     feed its 4 deg row: "empirical Bayes"), and that each 4 deg destination is shared among its
+     four 2 deg cells by how often drifters arrived in each, whatever cell they started in.
 Output: README/proposal submitted.
 
 Week 5 - Poster (20%, includes written peer review of two other groups' posters)
@@ -295,7 +369,8 @@ Week 7 - Full model
 
 Week 8 - Robustness
 - Computational + Quantitative: rerun across grid sizes (1/2/4 deg) and lags; drogue sensitivity
-  (drogued vs undrogued transitions at 4 deg, where both have data); years sensitivity (2010+
+  (all drifters vs undrogued only at 4 deg, decision 6a, plus drogued vs undrogued where both
+  have data); years sensitivity (2010+
   only, a filter on start_time); run the code unchanged on a different region ("nothing depends
   on R"). Optional, only if Week 7 finished on time: hexagonal cells as a cell-shape check (needs
   a new cell_index() and the h3 package).
@@ -392,6 +467,22 @@ in logs/ai_use_log.md).
    from the literature). The proposal will say P describes near-surface transport including
    direct wind effects; Week 8 compares drogued and undrogued transitions at 4 deg to size the
    difference.
+
+6a. Sensitivity check: all drifters vs undrogued drifters only (Stella, 2026-09-28; reworded
+   2026-10-03 after checking the sources).
+   Undrogued-only data is thin but usable: 0.7% / 22.4% / 49.5% / 57.4% of ocean cells are
+   adequate at 1 / 2 / 3 / 4 deg (data_quality.py), against 0.0% / 0.3% / 1.8% / 9.3% for
+   drogued-only. So undrogued-only can be compared with the main estimate at 4 deg, and drogued-only
+   can't.
+   Why it matters: undrogued drifters respond more strongly to wind and to the fast top few
+   centimetres of the ocean, and in the Gulf of Mexico they were found to spread and come ashore
+   much like the Deepwater Horizon oil (Novelli et al. 2020; Grodsky et al. 2011; Laxague et al.
+   2018). Published drifter debris and transition-matrix studies pool both kinds (van Sebille et
+   al. 2012; McAdam & van Sebille 2018) or check them separately (Maximenko et al. 2012), which
+   supports decision 6 as the main estimate.
+   Caution: this is a handful of studies, not a settled result, and the Gulf of Mexico drifters
+   may not be the same buoy type as ours. Most of these papers were checked from abstracts only
+   by Liam and AI Lit Review agent.
 
 7. Years: all years for the main estimate.
    Adequacy needs every drifter. 2010+ becomes a Week 8 sensitivity check, a filter on
