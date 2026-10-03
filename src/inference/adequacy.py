@@ -8,7 +8,7 @@ A transition probability p out of a cell estimated from n independent drifters h
 standard error sqrt(p(1-p)/n), which is largest at p = 0.5. Requiring SE <= 0.05
 in that worst case gives 0.25/n <= 0.0025, i.e. n >= 100 (a 95% interval of about +/-0.10).
 The stricter target of a 95% interval of +/-0.05 (n >= 1.96^2 * 0.25 / 0.05^2 = 385) was
-considered and rejected; see project_plan.txt, Week 1.
+considered and rejected; see project_plan.txt, decision 3.
 
 Distinct drifters stand in for independent samples: hourly readings from the same
 drifter are strongly correlated, so raw observation counts overstate the information.
@@ -95,7 +95,7 @@ def plot_adequacy(grids, summaries, region, out_path):
         ax.set_ylabel("Latitude (°N)")
 
     fig.colorbar(mesh, ax=axes, label="Distinct drifters per cell (log scale)", shrink=0.6)
-    fig.suptitle(f"Data adequacy by grid resolution, {region['name']} box")
+    fig.suptitle(f"Data adequacy by grid resolution, {region['label']}")
     fig.text(
         0.02, -0.04,
         f"Black line encloses cells with at least {N_MIN} distinct drifters (worst-case SE of a "

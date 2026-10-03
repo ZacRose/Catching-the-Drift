@@ -53,7 +53,7 @@ def coverage_map(data, region, out_path):
     ax_when.set_ylabel("Distinct drifters")
     ax_when.set_xlabel("Year")
 
-    fig.suptitle(f"GDP hourly coverage, {region['name']} box")
+    fig.suptitle(f"GDP hourly coverage, {region['label']}")
     fig.text(0.01, 0.01, "Blank cells have no observations (land, or never sampled).", fontsize=9)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     os.makedirs(FIGURES_DIR, exist_ok=True)

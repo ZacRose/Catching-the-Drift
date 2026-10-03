@@ -35,21 +35,25 @@ def missing_summary(data):
         print(f"  {name}: {missing.mean():.3%} missing")
 
 
-def drogued_adequacy(data, region, cell_size):
-    """Share of ocean cells with at least N_MIN distinct drifters: all drifters vs drogued readings only."""
+def drogue_adequacy(data, region, cell_size):
+    """Share of ocean cells with at least N_MIN distinct drifters, using all readings,
+    drogued readings only, and undrogued readings only. Returns the three shares (0 to 1)."""
     cell, n_lat_cells, n_lon_cells = cell_index(data["lon"], data["lat"], region, cell_size)
     n_cells = n_lat_cells * n_lon_cells
     drogued = data["drogue_status"]
     obs_all, drifters_all = per_cell_counts(cell, data["drifter_id"], n_cells)
     _, drifters_drogued = per_cell_counts(cell[drogued], data["drifter_id"][drogued], n_cells)
+    _, drifters_undrogued = per_cell_counts(cell[~drogued], data["drifter_id"][~drogued], n_cells)
     ocean = obs_all > 0
-    return np.mean(drifters_all[ocean] >= N_MIN), np.mean(drifters_drogued[ocean] >= N_MIN)
+    return (np.mean(drifters_all[ocean] >= N_MIN), np.mean(drifters_drogued[ocean] >= N_MIN),
+            np.mean(drifters_undrogued[ocean] >= N_MIN))
 
 
 def plot_quality(data, speed, region, out_path):
     """Speed distribution by drogue status, and where the fastest readings occur."""
     drogued = data["drogue_status"]
-    fast = speed > np.nanquantile(speed, OUTLIER_QUANTILE)
+    threshold = np.nanquantile(speed, OUTLIER_QUANTILE)
+    fast = speed > threshold
     fig, (ax_speed, ax_where) = plt.subplots(1, 2, figsize=(14, 4.8), gridspec_kw={"width_ratios": [1, 1.4]})
 
     bins = np.linspace(0, np.nanmax(speed), 80)
@@ -69,9 +73,18 @@ def plot_quality(data, speed, region, out_path):
     ax_where.set_xlabel("Longitude (°E)")
     ax_where.set_ylabel("Latitude (°N)")
 
+    fig.suptitle(f"Drifter speeds and outliers, {region['label']}")
     fig.tight_layout()
+    fig.text(
+        0.01, -0.06,
+        f"Left: speed by drogue (sea anchor) status. {np.mean(~drogued):.0%} of readings come from drifters that "
+        f"have lost the drogue; dropping them would leave too few drifters per cell, so they are kept.\nRight: the fastest {1 - OUTLIER_QUANTILE:.1%} of readings (above {threshold:.2f} m/s) sit in "
+        "known fast currents (Brazil and Brazil-Malvinas off South America, Agulhas in the southeast corner),\n"
+        "so they are real flow, not errors, and are kept.",
+        fontsize=9,
+    )
     os.makedirs(FIGURES_DIR, exist_ok=True)
-    fig.savefig(out_path, dpi=200)
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -90,9 +103,9 @@ if __name__ == "__main__":
     print("Drogue status:")
     print(f"  {np.mean(~drogued):.0%} of readings come from drifters that have lost their drogue")
     for cell_size in CELL_SIZES:
-        pass_all, pass_drogued = drogued_adequacy(data, region, cell_size)
+        pass_all, pass_drogued, pass_undrogued = drogue_adequacy(data, region, cell_size)
         print(f"  {cell_size:g}°: {pass_all:.1%} of ocean cells adequate using all drifters, "
-              f"{pass_drogued:.1%} using drogued readings only")
+              f"{pass_drogued:.1%} drogued readings only, {pass_undrogued:.1%} undrogued readings only")
 
     print("Speed outliers:")
     fast = speed > np.nanquantile(speed, OUTLIER_QUANTILE)
@@ -100,7 +113,8 @@ if __name__ == "__main__":
           f"(max {np.nanmax(speed):.2f} m/s), from {np.unique(data['drifter_id'][fast]).size} different drifters")
     print(f"  Undrogued: {np.mean(~drogued[fast]):.0%} of the fastest readings vs {np.mean(~drogued):.0%} overall")
 
-    print("Days for a typical (median-speed, drogued) drifter to cross one cell:")
+    # North-south crossing; east-west is a little quicker since longitude degrees shrink with latitude
+    print("Days for a median-speed drogued drifter to cross one cell north to south:")
     km_per_day = np.nanmedian(speed[drogued]) * 86.4
     for cell_size in CELL_SIZES:
         print(f"  {cell_size:g}°: {cell_size * KM_PER_DEG / km_per_day:.0f} days")

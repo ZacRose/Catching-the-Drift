@@ -1,6 +1,6 @@
 """
-Checks for the transition table and counts, on hand-made hourly tracks (no download).
-tau is 1 day here so the tracks stay short; the logic is the same at 15 days.
+Checks for the transition table and counts on hourly tracks (no download).
+tau is 1 day here so the tracks stay short, but the logic is the same at 15 days.
 Run: python3 -m pytest tests
 """
 import numpy as np
@@ -49,6 +49,27 @@ def make_inputs():
     return data, records
 
 
+def single_drifter(hours_in_r, segments, drifter_id=9):
+    """Inputs for one drifter sitting at the SW corner during hours_in_r, with record stretches
+    given as (first hour, last hour) pairs. Hours outside hours_in_r but inside a stretch are
+    readings outside R."""
+    data = {
+        "drifter_id": np.full(len(hours_in_r), drifter_id),
+        "time": (T0 + np.asarray(hours_in_r)).astype("datetime64[ns]"),
+        "lon": np.full(len(hours_in_r), SW_CORNER[0]),
+        "lat": np.full(len(hours_in_r), SW_CORNER[1]),
+        "drogue_status": np.ones(len(hours_in_r), dtype=bool),
+    }
+    records = {
+        "traj_id": np.array([drifter_id]),
+        "traj_typedeath": np.array([0], dtype=np.int8),
+        "seg_id": np.full(len(segments), drifter_id),
+        "seg_start": np.array([T0 + s for s, _ in segments]).astype("datetime64[ns]"),
+        "seg_end": np.array([T0 + e for _, e in segments]).astype("datetime64[ns]"),
+    }
+    return data, records
+
+
 def outcomes_by_drifter(table):
     return {int(i): table["outcome"][table["drifter_id"] == i].tolist() for i in np.unique(table["drifter_id"])}
 
@@ -69,6 +90,35 @@ def test_outcomes_stay_move_exit_end_and_gap():
         3: [LEFT_R],             # still reporting at hour 24, but outside R
         4: [GAP, ENDED],         # hour 24 falls in the 11-29 gap; hour 72 is after the record ends
     }
+
+
+def test_reentering_R_before_tau_counts_as_in_R():
+    # One unbroken record (hours 0-30): in R at 0-5, outside R at 6-19, back in R at 20-30
+    table = build_transitions(*single_drifter(np.r_[0:6, 20:31], [(0, 30)]), tau_days=1)
+    assert table["outcome"][0] == IN_R
+
+
+def test_record_boundaries_count_as_still_reporting():
+    # Outside R at hour 24, which is the record's last hour, or the first hour of a new stretch
+    last_hour = build_transitions(*single_drifter(np.arange(6), [(0, 24)]), tau_days=1)
+    first_hour = build_transitions(*single_drifter(np.arange(6), [(0, 10), (24, 30)]), tau_days=1)
+    assert last_hour["outcome"].tolist() == [LEFT_R]
+    assert first_hour["outcome"].tolist() == [LEFT_R]
+
+
+def test_input_order_does_not_matter():
+    data, records = make_inputs()
+    shuffle = np.random.default_rng(0).permutation(data["drifter_id"].size)
+    expected = build_transitions(data, records, tau_days=1)
+    got = build_transitions({k: v[shuffle] for k, v in data.items()}, records, tau_days=1)
+
+    def by_drifter_then_time(table):
+        order = np.lexsort((table["start_time"], table["drifter_id"]))
+        return {k: v[order] for k, v in table.items()}
+
+    expected, got = by_drifter_then_time(expected), by_drifter_then_time(got)
+    for k in expected:
+        np.testing.assert_array_equal(got[k], expected[k])  # treats NaN == NaN
 
 
 def test_destination_positions_and_per_row_fields():

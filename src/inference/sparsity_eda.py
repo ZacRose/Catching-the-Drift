@@ -54,8 +54,16 @@ def plot_count_distributions(obs_counts, drifter_counts, cell_size, out_path):
 
     fig.suptitle(f"How the data are spread across {cell_size:g}° cells")
     fig.tight_layout()
+    fig.text(
+        0.01, -0.06,
+        f"{np.mean(obs_counts >= N_MIN):.0%} of ocean cells have at least {N_MIN} hourly readings, but only "
+        f"{np.mean(drifter_counts >= N_MIN):.0%} have at least {N_MIN} distinct drifters, because one drifter "
+        "leaves many readings in a cell.\nReadings from the same drifter are not independent, so adequacy is "
+        "judged on drifters (dashed line: worst-case standard error of a transition probability <= 0.05).",
+        fontsize=9,
+    )
     os.makedirs(FIGURES_DIR, exist_ok=True)
-    fig.savefig(out_path, dpi=200)
+    fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
