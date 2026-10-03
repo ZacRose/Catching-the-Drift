@@ -35,15 +35,18 @@ def missing_summary(data):
         print(f"  {name}: {missing.mean():.3%} missing")
 
 
-def drogued_adequacy(data, region, cell_size):
-    """Share of ocean cells with at least N_MIN distinct drifters: all drifters vs drogued readings only."""
+def drogue_adequacy(data, region, cell_size):
+    """Share of ocean cells with at least N_MIN distinct drifters, using all readings,
+    drogued readings only, and undrogued readings only. Returns the three shares (0 to 1)."""
     cell, n_lat_cells, n_lon_cells = cell_index(data["lon"], data["lat"], region, cell_size)
     n_cells = n_lat_cells * n_lon_cells
     drogued = data["drogue_status"]
     obs_all, drifters_all = per_cell_counts(cell, data["drifter_id"], n_cells)
     _, drifters_drogued = per_cell_counts(cell[drogued], data["drifter_id"][drogued], n_cells)
+    _, drifters_undrogued = per_cell_counts(cell[~drogued], data["drifter_id"][~drogued], n_cells)
     ocean = obs_all > 0
-    return np.mean(drifters_all[ocean] >= N_MIN), np.mean(drifters_drogued[ocean] >= N_MIN)
+    return (np.mean(drifters_all[ocean] >= N_MIN), np.mean(drifters_drogued[ocean] >= N_MIN),
+            np.mean(drifters_undrogued[ocean] >= N_MIN))
 
 
 def plot_quality(data, speed, region, out_path):
@@ -100,9 +103,9 @@ if __name__ == "__main__":
     print("Drogue status:")
     print(f"  {np.mean(~drogued):.0%} of readings come from drifters that have lost their drogue")
     for cell_size in CELL_SIZES:
-        pass_all, pass_drogued = drogued_adequacy(data, region, cell_size)
+        pass_all, pass_drogued, pass_undrogued = drogue_adequacy(data, region, cell_size)
         print(f"  {cell_size:g}°: {pass_all:.1%} of ocean cells adequate using all drifters, "
-              f"{pass_drogued:.1%} using drogued readings only")
+              f"{pass_drogued:.1%} drogued readings only, {pass_undrogued:.1%} undrogued readings only")
 
     print("Speed outliers:")
     fast = speed > np.nanquantile(speed, OUTLIER_QUANTILE)
