@@ -5,3 +5,6 @@ lat_max: -4
 lon_min: -60
 lon_max: 20
 cell_size_deg: 2.0
+# Provisional release point (lat, lon) for the Week 4 release map: off southern Namibia, in the
+# 4 deg cell 26-30S, 12-16E. Replace once the Benguela coastal cells are defined (Week 4 issue a).
+release_point: [-28.0, 14.0]
