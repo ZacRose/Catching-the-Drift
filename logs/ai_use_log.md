@@ -54,3 +54,31 @@ One entry per session: what was asked, what the AI produced, and what we checked
 - **Produced:** `docs/literature/business_literature_review.md`, `docs/report/background.md`, `docs/proposal/significance.md`. Michelle's text is kept unchanged apart from formatting and one typo, with review notes and suggested wording under each. Also: full APA references, and the Week 3 Business status and region justification pointers in `project_plan.txt`.
 - **Checked:** an AI literature search checked each source against Crossref metadata, abstracts and the BCC web page. Full texts were blocked, so nothing was read in full. Results: Hutchings et al. 2009 is consistent with its abstract, though the four components need confirming. Drouin & Lozier 2019 abstract names only GDP drifters and OSCAR, with no subsurface floats, and its headline is a sizeable Drake Passage share of Benguela water. The BCC page lists the activities but doesn't call shipping "major"; it does flag international shipping routes as a pollution risk. Novelli et al. 2020 is accurate, but the drifters were probably CARTHE, not GDP buoys.
 - **Still to verify by the team:** read all four papers in full before the README cites them; source the offshore-oil point; add the client case; confirm the GDP drogue depth from `gdp-overview.pdf`.
+
+## 2026-10-12 - Poster study-region map (Claude Code)
+- **Asked:** replace the poster's plain box map with drifter tracks plus the box, following a teammate's peer feedback, so one figure shows the data, the region and the Benguela flow.
+- **Produced:** `src/gridding/trajectory_map.py` (daily tracks, mean-flow arrows on 4° cells with at least 100 drifters, region box), `tests/test_trajectory_map.py` (2 tests), `outputs/figures/trajectory_map.png`, and the Natural Earth 1:110m land outline in `data/external/` (cartopy could not be installed on Python 3.14, so the coastline is drawn with plain matplotlib).
+- **Checked:** the daily readings count (803,368 from 1,971 drifters) matches the Week 3 drifter-day starts. Arrows near Namibia point northwest and along 40°S point east, which matches the expected Benguela and South Atlantic Current directions. Tracks stop at the box edge because the region cache only holds readings inside R. 24 tests pass.
+- **Still to verify by the team:** whether the "Benguela Current" label position and the arrow length scale read well at poster size.
+
+## 2026-10-21 - Catch-up after the proposal and poster, and a repo tidy-up (Claude Code)
+- **Asked:** read the repo plus the submitted proposal and poster, bring `project_plan.txt` up to date, then tidy the codebase without losing any substance: fix anything inaccurate, and remove or move only what is certainly safe.
+- **Produced:**
+  - `project_plan.txt`: team names and streams; Week 4 and Week 5 status blocks (research questions, objectives, which open issues the proposal settled, the carry-over to Week 6); Weeks 6-7 matched to the proposal timeline; "quasi-stationary distribution" where the plan said "stationary"; glossary, typo and status fixes.
+  - Status notes on the three Business drafts, saying which review notes the proposal applied.
+  - `trajectory_map.mean_flow` reuses `grid.per_cell_counts`, and `transitions.save_grid_result` reuses `BOX_KEYS`.
+  - The submitted proposal and poster moved to `docs/proposal/` and `docs/poster/`.
+  - `.gitkeep` files removed from folders that already hold tracked files.
+- **Checked:** 24 tests pass. The old and new `mean_flow` give identical arrays on 200,000 synthetic readings. Every number added to the plan was checked against the proposal PDF or the committed outputs. The leftover `data/interim/*.npz.bak` was confirmed to be the faulty pre-rebuild cache (10,944 NaN `ve`), but it was not deleted.
+- **Still to verify by the team:** that the Week 4/5 status blocks and the Week 6 carry-over match what the team agreed; and the person-to-stream mapping (proposal names vs poster nicknames).
+
+## 2026-10-21 - Week 6 Quantitative (Claude Code)
+- **Asked:** implement the Week 6 Quantitative task in full: a neighbour-only baseline and test scores split by cells under and over 100 drifters (open issues g, h), fit the 2 deg shrinkage model, and map the posterior effective sample size in drifters beside the naive count (issue j).
+- **Produced:** `estimators.neighbour_P`; in `evaluate.py`, `tune_neighbour`, `tune_alpha` and `seen_cells`, plus a `cells` column in `evaluation_tau15d.csv`; `src/inference/shrinkage_fit.py` writing `data/processed/shrinkage_P_2deg_tau15d.npz`, `effective_sample_size_tau15d.csv` and `effective_sample_size_map.png`; `tests/test_quant_week6.py` (5 tests); the "empirical Bayes" note in `estimators.py` (issue k).
+- **Choices made by the AI (for the team to confirm):**
+  - the sparse/well-sampled split uses the adequacy map's all-drifter count, not the training set's (which would leave only 22% of cells adequate);
+  - the neighbour baseline's leak goes to every state, because a first version leaked only to cells seen in training and gave -inf to a few test moves;
+  - effective drifters = own drifters + alpha / median moves per drifter (15).
+- **Checked:** 29 tests pass. The Week 3 "all" rows of the evaluation CSV and `alpha_sensitivity.png` reproduce exactly. The refitted counts match `transition_counts_2deg_tau15d.npz` exactly. Every row of the fitted P sums to 1 with no zeros. The figure was inspected by eye.
+- **Still to verify by the team:** the split definition and the effective-sample-size formula. Results: shrinkage beats neighbour-only by about 0.9 per move, and the prior is worth only 3.75 drifters (41.3% -> 44.0% adequate). None of the score gaps has an interval yet (issue i).
+- **End of session (2026-10-21):** nothing is committed. Everything from both 2026-10-21 entries is uncommitted on `week5-poster-map`, and Liam will split it into week5 and `week6-quant` commits. `project_plan.txt` (the "Where we are" paragraph and the "Week 6 status" block) and the workspace `CLAUDE.md` record the state for the next session. 29 tests pass.

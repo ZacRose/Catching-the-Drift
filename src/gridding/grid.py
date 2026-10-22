@@ -6,7 +6,7 @@ per-cell counts. Shared by the coverage map, the adequacy check, the EDA and
 (from Week 3) the transition-matrix counts, so every stage bins identically.
 
 Cells are regular in degrees, so their area shrinks with cos(latitude): per-area results
-(e.g. a stationary distribution read as a density) must divide by cell area. Downstream
+(e.g. the quasi-stationary distribution read as a density) must divide by cell area. Downstream
 code should use only the flat cell id, so a different cell shape (e.g. hexagons) would
 need only a new cell_index().
 """

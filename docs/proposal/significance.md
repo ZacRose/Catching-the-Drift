@@ -3,6 +3,10 @@
 > **Draft** by Michelle (Business stream), from the team Google Doc, received 2026-10-03. The text
 > below is hers, with one typo fixed ("undroogued"). Review notes and suggested fixes follow it.
 > Sources: `docs/literature/business_literature_review.md`.
+>
+> **Status (2026-10-21):** the submitted proposal's section 1 is the corrected, cited version of
+> this text. It applies notes 1-3 and the oil point in note 4 (source [3]); the client case for
+> Shane Elipot is still only one sentence.
 
 ## Why is the problem important/significant?
 

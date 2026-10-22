@@ -35,7 +35,7 @@ import os
 import numpy as np
 
 from src.common.config import PROCESSED_DIR, load_region_bounds
-from src.ingest.load import load_region
+from src.ingest.load import BOX_KEYS, load_region
 from src.ingest.drifter_records import load_records
 from src.gridding.grid import grid_edges, cell_index, per_cell_counts
 
@@ -206,7 +206,7 @@ def save_grid_result(path, region, cell_size, tau_days, **arrays):
     n_lat_cells, n_lon_cells = len(lat_edges) - 1, len(lon_edges) - 1
     np.savez_compressed(
         path, **arrays, cell_size_deg=cell_size, n_lat_cells=n_lat_cells, n_lon_cells=n_lon_cells,
-        tau_days=tau_days, **{k: region[k] for k in ["lat_min", "lat_max", "lon_min", "lon_max"]},
+        tau_days=tau_days, **{k: region[k] for k in BOX_KEYS},
     )
 
 
