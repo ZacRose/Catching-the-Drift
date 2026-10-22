@@ -1,8 +1,9 @@
 """
 estimators.py
 
-Related task: Week 3 Quantitative - "settle the estimator". Three transition matrices,
-each (n_states x n_states) with the last state meaning "left R":
+Related task: Week 3 Quantitative - "settle the estimator" (plus the Week 6 neighbour-only
+baseline). Four transition matrices, each (n_states x n_states) with the last state meaning
+"left R":
 
 1. naive_P: counts / row totals (transitions.row_normalise, shared with Computational).
    Accurate where data is plentiful, but gives probability 0 to every transition it never
@@ -25,9 +26,17 @@ each (n_states x n_states) with the last state meaning "left R":
    training drifter reached still gets a little (land cells get that 0.5 too; it is wasted but
    tiny). The parent row itself gets one pseudo-transition spread evenly over all states, so no
    transition ever has probability exactly 0 - a held-out drifter can't score -inf.
+   The prior is built from the same training transitions as the counts (a cell's own moves
+   feed its 4 deg row), which makes this an empirical Bayes estimator (open issue k).
+4. neighbour_P (Week 6, open issue g): a fairer simple baseline than persistence. Material
+   stays in its cell or moves to one of the (up to 8) touching ocean cells, which is roughly
+   what a 15-day move does on a 2 deg grid (median displacement 153 km). A small "leak" is spread
+   over every other state, so a held-out move further than one cell, or into a cell no
+   training drifter reached, doesn't score -inf. Persistence at its best setting (eps = 0.7 at 2 deg) means "stay with 30%,
+   otherwise jump anywhere in the box", which is easy to beat; this one isn't.
 
-The fitting here is for Week 3 design and a preliminary check; Week 6 fits it properly and
-Week 7 adds the bootstrap.
+shrinkage_fit.py fits the shrinkage model on all drifters (the product); the bootstrap for its
+uncertainty comes later.
 """
 import numpy as np
 
@@ -46,6 +55,39 @@ def persistence_P(n_states, eps):
     P = np.full((n_states, n_states), eps / (n_states - 1))
     np.fill_diagonal(P, 1 - eps)
     P[-1] = 0.0
+    P[-1, -1] = 1.0
+    return P
+
+
+def neighbour_P(n_lat, n_lon, ocean, stay, leak):
+    """Stay with probability `stay`, move to a touching ocean cell with total probability
+    1 - stay - leak (shared equally), and spread `leak` equally over every other state (other
+    cells and the exit). Exit is absorbing.
+
+    Inputs:
+        n_lat, n_lon: grid shape (cells are numbered as in grid.cell_index).
+        ocean: bool per cell, True where training drifters were seen; only these count as
+               neighbours, so no neighbour share is wasted on land.
+        stay, leak: probabilities with stay + leak < 1.
+    Returns:
+        (n_cells + 1) x (n_cells + 1) matrix whose rows sum to 1.
+    """
+    n_cells = n_lat * n_lon
+    row, col = np.divmod(np.arange(n_cells), n_lon)
+    touching = (np.abs(row[:, None] - row[None, :]) <= 1) & (np.abs(col[:, None] - col[None, :]) <= 1)
+    np.fill_diagonal(touching, False)
+    near = touching & ocean[None, :]
+    far = ~near
+    np.fill_diagonal(far, False)
+
+    n_near = near.sum(axis=1)
+    n_far = far.sum(axis=1) + 1  # + 1 for the exit state
+    P = np.zeros((n_cells + 1, n_cells + 1))
+    P[:n_cells, :n_cells] = near * ((1 - stay - leak) / np.maximum(n_near, 1))[:, None] \
+        + far * (leak / n_far)[:, None]
+    P[:n_cells, n_cells] = leak / n_far
+    # a cell with no ocean neighbours keeps the neighbour share itself
+    P[np.arange(n_cells), np.arange(n_cells)] = stay + np.where(n_near == 0, 1 - stay - leak, 0)
     P[-1, -1] = 1.0
     return P
 
