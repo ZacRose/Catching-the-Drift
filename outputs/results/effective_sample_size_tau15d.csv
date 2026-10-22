@@ -1,0 +1,2 @@
+cell_size_deg,tau_days,alpha,moves_per_drifter,prior_worth_drifters,ocean_cells,pct_adequate_naive,pct_adequate_posterior,cells_made_adequate,ocean_cells_with_no_drifters
+2.0,15,56.2,15.0,3.75,598,41.3,44.0,16,2
