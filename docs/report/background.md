@@ -3,6 +3,9 @@
 > **Draft** by Michelle (Business stream), from the team Google Doc, received 2026-10-03. The text
 > below is hers, unchanged. Review notes and suggested fixes follow it. Sources and full references:
 > `docs/literature/business_literature_review.md`.
+>
+> **Status (2026-10-21):** review notes 1-4 were applied in the submitted proposal (sections 1-2),
+> which is the corrected, cited version to build the report background from.
 
 ## Intro/background and existing studies/solutions
 

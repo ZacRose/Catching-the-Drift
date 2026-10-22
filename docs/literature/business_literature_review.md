@@ -6,6 +6,11 @@ unchanged apart from formatting. Review notes from 2026-10-03 are at the end.
 Feeds: `docs/report/background.md` (report background) and `docs/proposal/significance.md`
 (README significance section).
 
+**Status (2026-10-21):** the submitted proposal resolves review notes 2-6 and the offshore oil and
+transition-matrix precedent items in note 7. Still open: note 1 (the four components are not
+used in the proposal, so still unconfirmed), and from note 7 windage, hexagonal or equal-area
+cells, the coastal strip width and the seasonal scoping note.
+
 ## Literature review
 
 ### 1. Hutchings et al. (2009) - The Benguela Current: An ecosystem of four components

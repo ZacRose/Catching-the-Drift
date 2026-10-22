@@ -1,9 +1,31 @@
 DATA3001 Group Project Plan - Global Drifter Program (GDP)
 
-Team: 5 people - 2 computational, 2 quantitative, 1 business.
+Team: 5 people - 2 computational, 2 quantitative, 1 business (as listed in the proposal):
+  Computational: Isaac (Zac) Rose, Zhiru (Stella) Lin
+  Quantitative:  Vidisha Trivedi, Liam Lightfoot
+  Business:      Keyao (Michelle) Huang
 Client: Shane Elipot (University of Miami). Built the GDP dataset.
-Deadlines: Week 4 proposal/README (15%) -> Week 5 poster + peer review (20%) -> Week 10 presentation
-(10% group + 15% individual) -> exam period final report (40%, max 30 pages).
+Deadlines: Week 4 proposal/README (15%, DONE) -> Week 5 poster + peer review (20%, poster DONE,
+peer review in progress outside the repo) -> Week 10 presentation (10% group + 15% individual)
+-> exam period final report (40%, max 30 pages).
+Submitted versions: docs/proposal/DATA3001 Project Proposal.pdf and
+docs/poster/DATA3001 Group 2 A1 Poster.png (not yet committed). The proposal's research
+questions, objectives and timeline (its sections 2 and 5) are what we committed to; Weeks 6-10
+below follow them.
+
+Where we are (2026-10-21, Week 6):
+- Done: Weeks 1-3 (merged to main), the proposal and the poster. Peer review is being done
+  outside the repo.
+- Week 6 Quantitative: done (see "Week 6 status" in section 5). It covers the neighbour-only
+  baseline, scores split by sparse and well-sampled cells, the 2 deg shrinkage model fitted on all
+  drifters, and the effective-sample-size map. The team should check the two choices flagged there.
+- Week 6 Computational (coastal cells, poster fixes, drifter bootstrap) and Business (RQ4
+  seasonal forecast): nothing in the repo yet.
+- Not yet on main: the Week 4 release map (branch week4-release-map, pushed); the Week 5 poster
+  map, a tidy-up and the Week 6 Quant work (uncommitted on week5-poster-map; to be split into
+  week5 and week6-quant commits).
+- Next to unblock others: the drifter bootstrap (issues c and i), since every "model A beats
+  model B" claim needs its intervals; and the coastal cells (issue a), which the release maps need.
 
 Contents: Sections 1-4 outline what we are doing and who does what. Section 5 is the
 week-by-week plan and what has been done so far. Section 7 lists key decisions we have made and
@@ -16,12 +38,12 @@ Key terms:
 - Cell: one square of the grid laid over R, e.g. 2 x 2 degrees.
 - tau: the time lag. Transition tracks where the drifter is tau days later.
 - Transition matrix P: an entry (row i, column j) gives the probability that a drifter starting in cell
-  i is in each other will be in cell j (or has left R completely) after tau days. P^n (P multiplied by
+  i will be in cell j (or has left R completely) after tau days. P^n (P multiplied by
   itself n times) forecasts n x tau days into future.
 - Naive P: P straight from counts (count / row total). No adjustments (e.g. smoothing) or 
   statistical cleaning.
-- Shrinkage: blending data from many small cells (e.g. 1 degree) with little data to larger regions (e.g.
-  4 degree cells) with more supporting data. 
+- Shrinkage: blending each small cell's own data (e.g. 2 degree, often thin) with the data of the
+  larger cell containing it (e.g. 4 degree, with more drifters).
 - Prior row / alpha: in our shrinkage model, a 2 deg cell's row starts from its 4 deg cell's row
   (the "prior"). alpha says how much that prior counts, in made-up transitions: a cell with alpha
   real transitions is half its own data, half its 4 deg cell.
@@ -65,7 +87,8 @@ Projects are "guidelines towards a minimally viable product", so this can change
 
 Box: latitude -42 to -4, longitude -60 to 20 (config/region.yaml).
 Justification for region (region lit review 2026-10-03:
-docs/literature/business_literature_review.md):
+docs/literature/business_literature_review.md; final, cited version in the submitted proposal,
+sections 1-2):
 - Data: the course benchmark is about 1M+ readings (Lachlan, in person); the example regions have
   0.8-3.9M readings and 363-1,106 drifters. Our box has 19,269,758 hourly readings from 1,975
   drifters, 1994-09-15 to 2022-10-31 (Week 1).
@@ -114,8 +137,8 @@ Quantitative (2 people)
   changes estimates.
 - MATH2801 Theory of Statistics: properties of the estimators.
 - MATH3821 Statistial Modelling and Computation: bootstrap uncertainty as a check on the Bayesian approach.
-- MATH2501 Linear Algebra: eigen-decomposition of P for the stationary distribution (where
-  material ends up in the long run), near-absorbing "sink" cells and the mixing time (how fast
+- MATH2501 Linear Algebra: eigen-decomposition of P for the quasi-stationary distribution (where
+  material that stays in R ends up in the long run), near-absorbing "sink" cells and the mixing time (how fast
   the system forgets where things started).
 - MATH2871 Data Management for Statistical Analysis: data wrangling of the gridded output.
 
@@ -143,7 +166,7 @@ Week 1 - Region and setup. DONE
   The northeast (Angola / northern Namibia) is thin at every resolution, so coarser cells alone
   don't fix it. 2 deg is the working grid and 4 deg the coarse baseline (decision 5).
 - Business: started the significance case.
-- Still to do: put the data-adequacy numbers and significance case in the README (Week 4), invite Lachland to GitHub.
+- Still to do: put the data-adequacy numbers and significance case in the README (Week 4), invite Lachlan to GitHub.
 
 Week 2 - Working data access and EDA. DONE
 - Computational: R is extracted once and cached in data/interim/ (src/ingest/load.py). The
@@ -342,28 +365,131 @@ Week 4 - Proposal/README due (15%).
      four 2 deg cells by how often drifters arrived in each, whatever cell they started in.
 Output: README/proposal submitted.
 
+Week 4 status - DONE (proposal submitted 2026-10-08; README.md is still title-only)
+- Primary question: for floating material entering the box, where does the surface flow carry
+  it after 15 days, three months and one year, and how reliable is each estimate?
+  RQ1 connectivity (which areas supply which, where material gathers, where and how fast it
+  leaves), RQ2 reliability (does shrinkage beat raw counts on held-out drifters, and how
+  sensitive is it to alpha), RQ3 drogue status (undrogued-only vs all drifters at 4 deg, an
+  indicative proxy for oil, not an oil-spill model), RQ4 seasonality (extension, Business).
+- Objectives: O1 15-day P at 4 and 2 deg with per-cell uncertainty, loadable by another analyst;
+  O2 release-point maps after 15 days, 3 months and 1 year with the chance of leaving the box or
+  reaching the coastal zone, plus the long-run pattern; O3 held-out test of the estimators in
+  sparse and well-sampled cells; O4 documented, tested code that runs on other regions.
+- Users named in the proposal: the Benguela Current Convention and national spill-contingency
+  planners, using P as a weeks-to-a-year planning tool, not an hourly forecast.
+- Figure 1 (src/linalg/release_map.py, branch week4-release-map, pushed but NOT yet merged into
+  main): drifters per 2 deg cell, and where material released in the 4 deg cell 26-30S, 12-16E
+  is after P^6 and P^24 (naive 4 deg P). Centre after 3 months near 25S, 3E (about 1,150 km
+  west-northwest); after a year near 25S, 15W, with 1.3% gone from the box. The release cell is
+  the provisional release_point in config/region.yaml on that branch (issue a still open).
+- Issues c, g, h, i, j and k are now settled in the proposal's methods text (drifter bootstrap
+  for uncertainty; a neighbour-only baseline; scores split by cells under and over 100 drifters;
+  alpha = 56 described as about four drifters; "empirical Bayes" stated), but none is in code yet.
+  Issues a, b, d, e and f are still open.
+- The proposal also commits to: the long-run pattern as the quasi-stationary distribution (the
+  leading left eigenvector of P restricted to cells inside the box, divided by cell area), the
+  Markov check P(15 d)^2 vs P(30 d), and four stated limitations (artificial dispersion, permanent
+  exit, coastal probability as a lower bound because grounded drifters stop reporting, the thin
+  north-east of the box).
+- Still unverified in the proposal: the 0.5 m drogue depth for Garcia-Pineda et al. 2020 ([9],
+  section 2.1). Check before the report reuses it.
+- Week 3 Business list: item 1 (significance, with sources for the activities and the offshore
+  oil point) is done in the proposal ([2], [3]), and typical lags are covered (McAdam & van
+  Sebille's 5-180 days, proposal section 4). Still not in the repo: windage of undrogued drifters,
+  hexagonal or equal-area cells, the coastal strip width (item 2), and the seasonal scoping note
+  (item 3).
+
 Week 5 - Poster (20%, includes written peer review of two other groups' posters)
 - The poster shows the 4 deg baseline as work in progress: "this is the whole-basin picture; next
   we go to 2 deg with shrinkage to resolve the coast".
 - Expect real questions from Shane Elipot and staff (why these cells, why this lag, why keep
   undrogued drifters). We need to know the method well enough to defend it and not just describe it.
 
-Week 6 - Poster feedback, start the real inference
-- Computational: fix pipeline issues raised at the poster. Optional: a "ran aground" coastline
-  state from typedeath.
-- Quantitative: fit the 2 deg shrinkage model. Redraw the adequacy map with the posterior
-  effective sample size (drifters + prior strength) beside the naive per-cell count, to show how
+Week 5 status - poster DONE; peer review in progress (outside the repo)
+- Poster "Transport in South Atlantic Gyre": proposal sections 1-4 on one A1 page, with the
+  Figure 1 panels, the adequacy bar chart, the drogue adequacy table and a new study-region map.
+- New figure: src/gridding/trajectory_map.py (branch week5-poster-map, not yet committed) draws
+  daily drifter tracks inside the box, mean-flow arrows on 4 deg cells with at least 100 drifters,
+  and the box, on a Natural Earth coastline (data/external/ne_110m_land.geojson). 2 new tests;
+  24 pass on that branch. week5-poster-map was branched from main, so it doesn't have
+  release_map.py; both branches add to logs/ai_use_log.md, so expect a small merge conflict there.
+- The proposal's Week 5 analysis tasks (coastal cells as release points and destinations, the
+  neighbour-only baseline, test scores split by sparse and well-sampled cells) are not in the repo
+  yet. They move to Week 6.
+
+Week 6 - Poster feedback, start the real inference (proposal timeline, plus the Week 5 carry-over)
+- Computational: define the Benguela coastal cells (issue a) and redraw P, P^6, P^24 from them;
+  fix issues raised at the poster; build the drifter bootstrap. Optional: a "ran aground"
+  coastline state from typedeath.
+- Quantitative: neighbour-only baseline and test scores split by cells under and over 100
+  drifters (issues g, h); fit the 2 deg shrinkage model. Redraw the adequacy map with the posterior
+  effective sample size (stated in drifters, issue j) beside the naive per-cell count, to show how
   much borrowing from neighbours rescues the thin cells.
-- Business: start the seasonal forecast from the transition table (it doesn't need finer output).
+- Business: start the RQ4 seasonal forecast from the transition table (it doesn't need finer
+  output).
 - Output: working 2 deg estimates with uncertainty on at least some cells, poster feedback
   included.
 
+Week 6 status - Quantitative DONE (2026-10-21, uncommitted on week5-poster-map; not yet
+reviewed by the team)
+Run: python3 -m src.inference.evaluate, then python3 -m src.inference.shrinkage_fit (seconds each).
+1. Neighbour-only baseline (issue g): estimators.neighbour_P. Stay with probability "stay", move
+   to a touching ocean cell, plus a small "leak" to every other state so no move scores -inf;
+   stay and leak chosen on the validation drifters (2 deg: 0.3 / 0.1; 4 deg: 0.5 / 0.03).
+2. Scores split by sparse vs well-sampled start cells (issue h), using the adequacy map's count
+   (distinct drifters starting a move, all drifters; 41% of 2 deg ocean cells adequate, 40% of
+   test moves start in a thin cell). outputs/results/evaluation_tau15d.csv now has a "cells"
+   column; its "all" rows are identical to Week 3's. 2 deg results (mean held-out log-likelihood
+   per move, higher = better; compare within a column only):
+       model                   all       under 100   100+
+       naive P                 -inf      -inf        -inf
+         (moves given 0)       0.76%     1.2%        0.46%
+         (on the rest)         -2.016    -1.840      -2.135
+       persistence (eps 0.7)   -5.36     -5.19       -5.48
+       neighbour-only          -2.97     -2.76       -3.11
+       shrinkage (alpha 56)    -2.069    -1.918      -2.171
+         (where naive finite)  -2.024    -1.854      -2.139
+   What this says: shrinkage beats the fairer baseline clearly (by about 0.9 per move) in both
+   groups, so the 2 deg matrix carries real information beyond "stay or move one cell". Naive P
+   gives zero probability 2.6 times as often in thin cells, which is where shrinkage's
+   advantage lies. On the moves naive can score, shrinkage is slightly worse, a little more so in
+   thin cells (0.014 vs 0.004), so its gain is still entirely from never giving zero. None of
+   these gaps has an interval yet (issue i, the drifter bootstrap), so don't call the small
+   ones real. At 4 deg, naive (-1.34 where finite) beats neighbour-only (-1.77).
+3. 2 deg shrinkage model fitted (src/inference/shrinkage_fit.py). alpha = 56.2 is re-chosen on
+   train -> valid exactly as in evaluate.py, then the model is refitted on all drifters as the
+   product: data/processed/shrinkage_P_2deg_tau15d.npz (P, counts, alpha, start_drifters,
+   effective_drifters, grid metadata; ~3 MB). Every cell row sums to 1 with no zeros; the counts
+   match transition_counts_2deg_tau15d.npz exactly. Rows of cells with no drifters are the 4 deg
+   prior alone (land or unsampled), so mask them.
+4. Effective sample size in drifters (issue j): own drifters + alpha / 15 moves per drifter, so
+   the 4 deg prior is worth 3.75 drifters per cell. Adequate 2 deg ocean cells go from 41.3%
+   to 44.0% (16 more cells). Figure: outputs/figures/effective_sample_size_map.png; numbers:
+   outputs/results/effective_sample_size_tau15d.csv. What this says: at the alpha the
+   validation data chose, borrowing from the 4 deg cell barely rescues thin cells by the
+   N = 100 rule. The data prefer each cell's own counts, and the prior's job is to fill in moves
+   never seen, not to add precision. Report this as it is (working norms: defensible negative results).
+Tests: tests/test_quant_week6.py, 5 tests (neighbour rows, land neighbours, isolated cell,
+seen cells, effective drifters). 29 tests in the repo on this branch, all passing.
+Issue k: the empirical Bayes note is now in the estimators.py docstring (also in the proposal).
+For the team to confirm (both were the AI's choice; see the 2026-10-21 AI log entry):
+  (1) "Thin" cells are judged by the adequacy map's count (all drifters), so the split matches
+      the proposal's Figure 1a. Counting only the training drifters would make 78% of cells thin
+      (22% adequate), because each model is fitted on 80% of drifters.
+  (2) Effective drifters = own drifters + alpha / 15, using the median moves per drifter in a
+      cell. A per-cell ratio would be the alternative.
+Still open for Quant: intervals on every score (issue i, needs the Computational bootstrap).
+
 Week 7 - Full model
 - Quantitative: fit the model across the whole grid; run the Week 3 evaluation (naive vs
-  shrinkage vs persistence on held-out drifters) and the prior-sensitivity check. Test the Markov
-  assumption by comparing P(tau)^2 with P(2 tau) (Chapman-Kolmogorov). Stationary distribution and
-  mixing time, divided by cell area when shown as a density.
-- Computational: pipeline changes needed at scale (e.g. the bootstrap refits P hundreds of times).
+  shrinkage vs the simple baselines on held-out drifters) and the prior-sensitivity check. Test
+  the Markov assumption by comparing P(tau)^2 with P(2 tau) (Chapman-Kolmogorov). Long-run
+  pattern as the quasi-stationary distribution (P restricted to cells inside the box, since
+  "left R" absorbs everything in the end) and mixing time, divided by cell area when shown as a
+  density.
+- Computational: build the transition table at other time steps; pipeline changes needed at
+  scale (e.g. the bootstrap refits P hundreds of times).
 - Business: continue the seasonal forecast, including the train/test split.
 - Output: a draft product - P plus its uncertainty, in a form another analyst could pick up.
 
