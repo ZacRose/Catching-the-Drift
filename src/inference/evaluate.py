@@ -73,12 +73,13 @@ def pick(grid, scores, name):
     return float(grid[i])
 
 
-def tune_neighbour(n_lat, n_lon, ocean, s_va, e_va):
-    """(stay, leak) for neighbour_P with the best validation score; warn if either is on the grid's edge."""
-    settings = [(stay, leak) for stay in STAYS for leak in LEAKS if stay + leak < 1]
+def tune_neighbour(n_lat, n_lon, ocean, s_va, e_va, stays=STAYS, leaks=LEAKS):
+    """(stay, leak) for neighbour_P with the best validation score; warn if either is on the grid's edge.
+    stays and leaks are the values searched (markov_check.py widens leaks for 30-day moves)."""
+    settings = [(stay, leak) for stay in stays for leak in leaks if stay + leak < 1]
     scores = [log_lik(neighbour_P(n_lat, n_lon, ocean, stay, leak), s_va, e_va).mean() for stay, leak in settings]
     stay, leak = settings[int(np.argmax(scores))]
-    if stay in (STAYS[0], STAYS[-1]) or leak in (LEAKS[0], LEAKS[-1]):
+    if stay in (stays[0], stays[-1]) or leak in (leaks[0], leaks[-1]):
         print(f"  warning: best neighbour setting stay={stay:g}, leak={leak:g} is at the edge of the search grid")
     return stay, leak
 

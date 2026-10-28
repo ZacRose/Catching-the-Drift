@@ -41,6 +41,11 @@ def load_transitions(region, path=TRANSITIONS_PATH, verbose=True):
     Returns:
         dict with the COLUMNS names plus "exited"; start_time as datetime64.
     """
+    return usable_transitions(load_raw_transitions(path), region, verbose)
+
+
+def load_raw_transitions(path=TRANSITIONS_PATH):
+    """Every row of a saved transition table (all four outcomes), as a dict of the COLUMNS arrays."""
     if not os.path.exists(path):
         raise FileNotFoundError(
             f"{path} not found. Pull the latest data/processed/ from git, or run "
@@ -50,8 +55,15 @@ def load_transitions(region, path=TRANSITIONS_PATH, verbose=True):
     missing = [c for c in COLUMNS if c not in stored.files]
     if missing:
         raise KeyError(f"{os.path.basename(path)} has no {missing} (it has {stored.files}).")
-    table = {c: stored[c] for c in COLUMNS}
+    return {c: stored[c] for c in COLUMNS}
 
+
+def usable_transitions(table, region, verbose=True):
+    """The rows of a raw table with a known destination, cleaned as load_transitions() describes.
+
+    Split out of load_transitions() in Week 7 so a table built in memory (e.g. the 30-day moves
+    chained in markov_check.py) is cleaned exactly the same way as one read from disk.
+    """
     outcome = table["outcome"]
     if verbose:
         print(f"Transition table: {outcome.size:,} rows")

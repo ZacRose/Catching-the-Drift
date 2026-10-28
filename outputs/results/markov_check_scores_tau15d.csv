@@ -1,0 +1,10 @@
+grid,lag_days,model,setting,cells,test_drifters,test_transitions,mean_loglik,pct_zero_prob,mean_loglik_where_finite
+2 deg,30,"direct P(2 tau), shrinkage",alpha=178,all,369,155557,-2.70195918994869,0.0,-2.70195918994869
+2 deg,30,"direct P(2 tau), shrinkage",alpha=178,under 100 drifters,313,62528,-2.588148494075585,0.0,-2.588148494075585
+2 deg,30,"direct P(2 tau), shrinkage",alpha=178,100+ drifters,301,93029,-2.778455284624045,0.0,-2.778455284624045
+2 deg,30,"Markov P(tau)^2, shrinkage",alpha=56.2,all,369,155557,-2.657579083127346,0.0,-2.657579083127346
+2 deg,30,"Markov P(tau)^2, shrinkage",alpha=56.2,under 100 drifters,313,62528,-2.534714692957113,0.0,-2.534714692957113
+2 deg,30,"Markov P(tau)^2, shrinkage",alpha=56.2,100+ drifters,301,93029,-2.7401604780532756,0.0,-2.7401604780532756
+2 deg,30,"neighbour-only, fitted to 2 tau",stay=0.1 leak=0.4,all,369,155557,-4.439314031316875,0.0,-4.439314031316875
+2 deg,30,"neighbour-only, fitted to 2 tau",stay=0.1 leak=0.4,under 100 drifters,313,62528,-4.34635272005512,0.0,-4.34635272005512
+2 deg,30,"neighbour-only, fitted to 2 tau",stay=0.1 leak=0.4,100+ drifters,301,93029,-4.50179653538093,0.0,-4.50179653538093

@@ -21,6 +21,9 @@ Where we are (2026-10-21, Week 6):
   drifters, and the effective-sample-size map. The team should check the two choices flagged there.
 - Week 6 Computational (coastal cells, poster fixes, drifter bootstrap) and Business (RQ4
   seasonal forecast): nothing in the repo yet.
+- Week 7 Quantitative (2026-10-28): done except everything that needs the drifter bootstrap
+  (see "Week 7 status" in section 5): the Markov check, the long-run pattern and mixing time, and
+  the prior-sensitivity check on them. Not yet reviewed by the team; four choices flagged there.
 - Not yet on main: the Week 4 release map (branch week4-release-map, pushed); the Week 5 poster
   map, a tidy-up and the Week 6 Quant work (uncommitted on week5-poster-map; to be split into
   week5 and week6-quant commits).
@@ -492,6 +495,76 @@ Week 7 - Full model
   scale (e.g. the bootstrap refits P hundreds of times).
 - Business: continue the seasonal forecast, including the train/test split.
 - Output: a draft product - P plus its uncertainty, in a form another analyst could pick up.
+
+Week 7 status - Quantitative DONE except the uncertainty (2026-10-28, Vidisha with Claude Code;
+not yet reviewed by the team)
+Run: python3 -m src.inference.markov_check, then python3 -m src.linalg.long_run (seconds each).
+0. Model across the whole grid and the evaluation: the 2 deg shrinkage model was already fitted on
+   every cell in Week 6. evaluate.py and shrinkage_fit.py were rerun: the evaluation CSV, the
+   effective-sample-size CSV and the saved P reproduce exactly. alpha_sensitivity.png is still the
+   prior-sensitivity check for the scores; item 3 below adds one for the long-run results.
+1. Markov check, P(15 d)^2 vs P(30 d) (src/inference/markov_check.py, markov_check.png,
+   markov_check_tau15d.csv, markov_check_scores_tau15d.csv).
+   30-day moves are built by chaining two consecutive 15-day rows of the committed table (exact for
+   drifters still in R at day 15; 450 random rows checked by hand-written lookup, 0 mismatches).
+   This stands in for Computational's 30-day table; the script uses transitions_tau30d.npz instead
+   once it exists. Drifters that left R by day 15 count as "left R" at day 30, as P^2 assumes.
+   - 2 deg, held-out test drifters (mean log-likelihood per 30-day move, higher = better):
+         model                                all      under 100   100+
+         direct P(30 d), shrinkage (alpha 178)   -2.702   -2.588      -2.778
+         P(15 d)^2, shrinkage (alpha 56)         -2.658   -2.535      -2.740
+         neighbour-only, fitted to 30 d          -4.44    -4.35       -4.50
+     Two 15-day steps predict 30-day moves slightly better than a matrix fitted to 30-day moves
+     directly, in both groups: whatever the Markov assumption costs is smaller than the extra noise
+     of fitting the 30-day matrix (its rows are more spread out). No interval yet (issue i).
+   - Naive P, cells with 100+ drifters starting a 30-day move. Noise reference: P(15)^2 from one
+     random half of the drifters vs P(30) from the other ("Markov gap"), against P(30) from each half
+     ("noise only"):
+         grid   cells   median distance   Markov gap   noise only   gap above noise
+         4 deg  125     0.07              0.12         0.10         84% of cells
+         2 deg  232     0.11              0.20         0.22         12% of cells
+     At 2 deg the data can't tell P(15)^2 from P(30). At 4 deg there is a small but real difference:
+     two steps spread material too widely (row entropy 1.90 vs 1.71), the "artificial dispersion"
+     limitation in the proposal, because a 4 deg cell forgets where in the cell a drifter was. The
+     chance of staying in the same cell matches (median 0.30 both). So: Markov is adequate at 2 deg;
+     at 4 deg, P^n maps are slightly too smooth.
+   - Re-entry (decision 11b): 20.0% of drifters outside R at day 15 (2,332 of 11,654) are back
+     inside at day 30. Counting them as gone puts 2.53% of 30-day moves out of R, against 2.22% if
+     they are followed, so the absorbing exit rule overstates 30-day exits by about 14%, and the
+     effect compounds in P^6 and P^24. Report exits (and the half-life below) with this caveat.
+2. Long-run pattern and mixing time (src/linalg/long_run.py, quasi_stationary_map.png,
+   long_run_tau15d.csv, long_run_top_cells_tau15d.csv). Leading left eigenvector of P restricted to
+   cells with drifters, divided by each cell's area inside the box:
+         grid, model          lambda_1   half-life in R   mixing (median / slowest start)
+         4 deg naive          0.9955     6.4 years        1.6 / 3.2 years
+         2 deg shrinkage      0.9975     11.2 years       1.8 / 3.4 years
+   Material that stays in R gathers in the centre of the subtropical gyre, around 26-34S, 8-20W:
+   up to 7.5 times the box-average density at 2 deg (5.2 at 4 deg), with 45% of it in the densest 10%
+   of cells; the north (equatorial) part of the box holds almost none. Both grids give nearly the same
+   pattern (distance 0.09 once 2 deg is added up into 4 deg cells), so where material gathers is
+   robust. How long it stays is not: the half-life nearly doubles from 4 to 2 deg, consistent with the
+   4 deg artificial dispersion above pushing material to the edges faster (a Week 8 robustness
+   point; material lost into dropped no-data cells is only about 1% of the loss at both grids).
+   The half-life is also a lower bound, since re-entry is ignored. Mixing ("forgets where it started", total
+   variation 0.25 of the pattern) takes about 1.5-2 years from a typical cell.
+   Check against the literature before citing: the South Atlantic "garbage patch" of drifter studies
+   (e.g. Maximenko et al. 2012; van Sebille et al. 2012) should sit in a similar place.
+3. Prior sensitivity of the long-run results (2 deg refitted on all drifters at alpha / 4 and 4 x
+   alpha): the pattern barely moves (distance 0.004 and 0.012 from the main fit); half-life 11.6 /
+   11.2 / 10.2 years; median mixing 1.8 / 1.8 / 1.6 years. The long-run conclusions don't depend on alpha.
+Tests: tests/test_quant_week7.py, 7 tests (chaining, both exit conventions, re-entry count, total
+variation, a quasi-stationary distribution with a known answer, mixing, cell areas). 36 tests pass.
+For the team to confirm (the AI's choices; see the 2026-10-28 AI log entry):
+  (1) 30-day moves chained from the 15-day table, with the absorbing convention for the check, until
+      Computational's 30-day table exists.
+  (2) The split-half noise reference (seed 7) in place of intervals, until the bootstrap exists.
+  (3) Cells with no drifters are dropped from the long-run matrix (material entering them counts as
+      lost), and mixing uses the textbook total-variation cut-off of 0.25.
+  (4) For 30-day moves the neighbour baseline searches lower "stay" and higher "leak" values
+      (evaluate.tune_neighbour now takes the search grids as arguments; 15-day results unchanged).
+Still open for Quant: intervals on every score and on P, the pattern and the half-life (issues c
+and i, the drifter bootstrap). long_run.long_run_summary() and markov_check.grid_comparison() take
+any refitted P or table, so the bootstrap can call them per resample.
 
 Week 8 - Robustness
 - Computational + Quantitative: rerun across grid sizes (1/2/4 deg) and lags; drogue sensitivity
