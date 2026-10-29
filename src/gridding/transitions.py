@@ -23,7 +23,8 @@ coastline state, so their share is reported instead.
 
 tau defaults to 15 days: the time a median-speed drogued drifter takes to cross a 2 degree
 cell north to south (data_quality.py). The same tau is used at every grid size so that
-resolution comparisons aren't confounded by the lag.
+resolution comparisons aren't confounded by the lag. Week 7 builds the same table at other lags
+(5, 10, 30, 60 and 90 days) with src/gridding/lags.py; every lag is saved as table_path(tau_days).
 
 Loading the saved table (tau_days is a single number, not a column, so take it out before
 filtering rows):
@@ -201,6 +202,11 @@ def row_normalise(counts):
     return P
 
 
+def table_path(tau_days=TAU_DAYS):
+    """Where the transition table for a lag of tau_days is saved: data/processed/transitions_tau<N>d.npz."""
+    return os.path.join(PROCESSED_DIR, f"transitions_tau{tau_days}d.npz")
+
+
 def save_grid_result(path, region, cell_size, tau_days, **arrays):
     """Save arrays from one grid size with what's needed to map cell ids back to positions."""
     lat_edges, lon_edges = grid_edges(region, cell_size)
@@ -216,14 +222,14 @@ if __name__ == "__main__":
     table = build_transitions(load_region(region), load_records(region), TAU_DAYS)
 
     os.makedirs(PROCESSED_DIR, exist_ok=True)
-    table_path = os.path.join(PROCESSED_DIR, f"transitions_tau{TAU_DAYS}d.npz")
-    np.savez_compressed(table_path, **table, tau_days=TAU_DAYS)
+    path = table_path(TAU_DAYS)
+    np.savez_compressed(path, **table, tau_days=TAU_DAYS)
 
     print(f"Transition table, tau = {TAU_DAYS} days: {table['outcome'].size:,} starts "
           f"from {np.unique(table['drifter_id']).size:,} drifters")
     for code, name in OUTCOME_NAMES.items():
         print(f"  {name}: {np.mean(table['outcome'] == code):.1%}")
-    print(f"Saved {table_path}")
+    print(f"Saved {path}")
 
     # Counts on the working grid (input to the Week 6 shrinkage model)
     fine = region["cell_size_deg"]

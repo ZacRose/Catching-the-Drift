@@ -13,17 +13,17 @@ docs/poster/DATA3001 Group 2 A1 Poster.png. The proposal's research
 questions, objectives and timeline (its sections 2 and 5) are what we committed to; Weeks 6-10
 below follow them.
 
-Where we are (2026-10-29, Week 6):
-- Done: Weeks 1-3, the proposal and the poster. Week 5 poster map and Week 6 Quantitative are on
-  main (pull requests #9 and #10). Peer review is being done outside the repo.
-- Week 6 Computational: done apart from the poster fixes (see "Week 6 status - Computational" in
-  section 5): Benguela coastal cells, release maps from them, and the drifter bootstrap with
-  intervals on P, on every held-out score and on the release maps. On branch week6-computational,
-  not yet committed or reviewed; the Week 4 release map (branch week4-release-map) is merged into it.
-- Week 6 Business (RQ4 seasonal forecast): nothing in the repo yet.
-- The team should check the choices flagged in both Week 6 status blocks.
-- Poster fixes: the poster feedback isn't recorded in the repo, so this part of Week 6 is waiting
-  on it.
+Where we are (2026-10-29, Week 7):
+- Done and on main: Weeks 1-6 Computational and Quantitative, the proposal, the poster and the
+  Week 4 release map (pull requests #9, #10 and #11). Peer review was submitted outside the repo.
+- Week 7 Quantitative (Markov check, long-run pattern, mixing time, prior sensitivity): pushed on
+  branch week7-quant, not merged yet; the team will merge it after Week 7 Computational.
+- Week 7 Computational: done (see "Week 7 status - Computational" in section 5). The transition
+  table now exists at 5, 10, 15, 30, 60 and 90 days, checked three ways, with a summary of what
+  changes with the time step. On branch week7-comp, not yet committed or reviewed.
+- Week 6 and 7 Business (RQ4 seasonal forecast): nothing in the repo yet.
+- The team should check the choices flagged in the Week 6 and Week 7 status blocks.
+- Poster fixes: no poster feedback has come back yet, so this part of Week 6 is still waiting.
 
 Contents: Sections 1-4 outline what we are doing and who does what. Section 5 is the
 week-by-week plan and what has been done so far. Section 7 lists key decisions we have made and
@@ -376,8 +376,8 @@ Week 4 status - DONE (proposal submitted 2026-10-08; README.md is still title-on
   sparse and well-sampled cells; O4 documented, tested code that runs on other regions.
 - Users named in the proposal: the Benguela Current Convention and national spill-contingency
   planners, using P as a weeks-to-a-year planning tool, not an hourly forecast.
-- Figure 1 (src/linalg/release_map.py, branch week4-release-map; merged into week6-computational
-  on 2026-10-29, not yet on main): drifters per 2 deg cell, and where material released in the 4 deg cell 26-30S, 12-16E
+- Figure 1 (src/linalg/release_map.py, branch week4-release-map; on main since pull request #11,
+  2026-10-29): drifters per 2 deg cell, and where material released in the 4 deg cell 26-30S, 12-16E
   is after P^6 and P^24 (naive 4 deg P). Centre after 3 months near 25S, 3E (about 1,150 km
   west-northwest); after a year near 25S, 15W, with 1.3% gone from the box. The release cell is
   the provisional release_point in config/region.yaml (issue a, settled in Week 6).
@@ -478,8 +478,8 @@ For the team to confirm (both were the AI's choice; see the 2026-10-21 AI log en
       cell. A per-cell ratio would be the alternative.
 Intervals on every score (issue i): done with the Computational bootstrap, see the next block.
 
-Week 6 status - Computational DONE except the poster fixes (2026-10-29, branch week6-computational;
-not yet committed or reviewed by the team)
+Week 6 status - Computational DONE except the poster fixes (2026-10-29; on main since pull
+request #11)
 Run, after src.inference.shrinkage_fit: python3 -m src.gridding.coast, then src.inference.bootstrap
 (about 1.5 minutes), src.inference.score_intervals and src.linalg.coastal_release (under 30 seconds
 each). Tests run in the DATA3001 conda environment.
@@ -583,6 +583,92 @@ Week 7 - Full model
 - Business: continue the seasonal forecast, including the train/test split.
 - Output: a draft product - P plus its uncertainty, in a form another analyst could pick up.
 
+Week 7 status - Computational DONE (2026-10-29, branch week7-comp; not yet committed or reviewed
+by the team)
+Run: python3 -m src.gridding.lags (2-3 minutes; needs the region and records caches in data/interim/).
+1. What was built: the Week 3 transition table at 5, 10, 30, 60 and 90 days, saved as
+   data/processed/transitions_tau5d.npz, ..._tau90d.npz (about 11 MB each). They are made by the
+   same function as the 15-day table (build_transitions with a different tau): the same starts
+   (each drifter's 00:00 UTC reading in R, every day), the same columns and the same outcome codes.
+   So row i is the same drifter-day start in every table, and any script that reads the 15-day
+   table reads the others by being given the other path (transitions.table_path(tau)).
+   Why these lags:
+   - 30 days: the Markov check, P(15 d)^2 vs P(30 d) (proposal section 4). Quant's
+     markov_check.py (branch week7-quant) uses transitions_tau30d.npz automatically once it exists.
+   - 90 days: the same check for the 3-month map we headline, P(15 d)^6 vs P(90 d).
+   - 60 days: between 30 and 90, so a trend with the lag can be seen rather than two points.
+   - 5 and 10 days: shorter steps for the Week 8 time-step check. 5 days is still longer than the
+     2-3 days after which a drifter's motion stops depending on its recent past (proposal
+     section 4), and close to the ~8 days a drifter takes to cross a 1 deg cell (Week 2).
+   Read with care: a long-lag destination is where the drifter is at start + tau, whatever
+   happened in between. A drifter that left the box and came back by then counts as "in R" here,
+   while P(15 d)^k counts it as lost ("left R" is absorbing, decision 11b).
+2. Checks, all passed (outputs/results/lag_checks.csv; the script saves nothing if any fails):
+   - Rebuild: the 15-day table built by the new script is identical, column for column, to the
+     committed transitions_tau15d.npz (803,368 rows). The committed file was not rewritten.
+   - Composition: a drifter still in R after a days has its own row starting then, so table a
+     followed by table b must give exactly table a + b. Checked on every start where this applies:
+     5 + 5 = 10 days (785,499 starts), 15 + 15 = 30 (765,123), 30 + 30 = 60 and 30 + 60 = 90
+     (739,662 each). 0 mismatches.
+   - Brute force: at every lag, 25 random rows of each outcome were worked out again with plain
+     lookups in the raw readings and record stretches, not the method the builder uses. 0 of 600
+     differ. This is the Week 3 brute-force check, now in code (half of open issue f; the
+     decision 8 end_date evidence is still only in the AI log).
+   - Cross-check with week7-quant (run in a temporary copy of that branch, nothing merged): its
+     30-day moves chained from the 15-day table ("observed" version) match transitions_tau30d.npz
+     on 99.75% of rows. All 1,972 rows that differ are cases its own docstring says chaining can't
+     settle: the drifter was out of R or in a record gap at day 15 and had stopped reporting by
+     day 30. Chaining counts some of these as exits, so it puts 2.22% of 30-day moves out of the
+     box, against 2.11% in the real table.
+3. Results (outputs/results/lag_summary.csv, outputs/figures/lag_summary.png). Columns are % of
+   daily starts; "stay in cell" = % of moves within R that end in their start cell; "adequate" = %
+   of ocean cells with at least 100 drifters starting a counted move (decision 3).
+       tau    in R   left R  record ended   gap    median   stay in cell     adequate
+                             (data stops)           km      1 / 2 / 4 deg    1 / 2 / 4 deg
+        5 d   97.8   0.75     0.83 (0.08)   0.65     64     35 / 61 / 79     2.6 / 42.3 / 79.6
+       10 d   96.4   1.16     1.64 (0.16)   0.77    112     17 / 40 / 65     2.3 / 41.6 / 78.4
+       15 d   95.2   1.45     2.45 (0.23)   0.86    153     10 / 28 / 54     2.2 / 41.3 / 78.4
+       30 d   92.1   1.99     4.89 (0.43)   1.05    256      4 / 13 / 34     1.9 / 38.6 / 75.9
+       60 d   86.4   2.60     9.77 (0.82)   1.20    433      1 /  5 / 17     1.0 / 34.1 / 69.1
+       90 d   81.3   2.95    14.49 (1.20)   1.26    590      1 /  3 / 10     0.7 / 30.6 / 63.6
+   The 15-day row reproduces Week 3 exactly (95.2 / 1.5 / 2.4 / 0.9%, 776,777 moves, 153 km,
+   41.3% and 78.4% adequate).
+   What this says:
+   - Longer steps lose data, mostly because records end before start + tau: 2.4% of starts at
+     15 days, 4.9% at 30 and 14.5% at 90. Only 1.2 points of the 90-day figure is the dataset
+     stopping (October 2022); the rest is drifters that died or ran aground. Those starts aren't
+     counted, so a matrix fitted to 90-day moves rests only on drifters that kept reporting for
+     90 days, while P(15 d)^6 uses all of them. When Quant compares the two, part of any gap may
+     come from which drifters each one is built on, not from the Markov assumption. At 30 days
+     the loss is small.
+   - Adequate cells fall as the lag grows, for the same reason: from 15 to 90 days, 41% to 31% at
+     2 deg and 78% to 64% at 4 deg. Shorter steps add almost nothing (42.3% at 5 days), because a
+     cell has the same drifters whatever the lag.
+   - 1 deg cells are not adequate at any lag (2.6% at best, counting drifters that start a move;
+     Week 1's 5.5% counted any reading). A Week 8 1 deg matrix would rest almost entirely on
+     shrinkage towards 2 deg.
+   - At 5 days 79% of 4 deg moves stay in their cell, so a 5-day 4 deg matrix is mostly "stay put",
+     and a year would take 73 steps, each adding artificial dispersion (proposal section 2).
+     15 days moves most 2 deg moves (72%) out of their cell while losing few starts (3.3%
+     unknown); 30 days does the same for 4 deg (66%, 5.9% unknown); at 1 deg, 5 days already
+     moves 65%. These are inputs for the Week 8 choice of lags per grid, not a decision.
+Tests: tests/test_comp_week7.py, 5 tests on hand-made tracks (same starts at every lag; the
+composition rule, and that it catches a wrong end position; the brute-force lookup on all four
+outcomes, and that it catches a wrong outcome; the summary's shares). 47 tests in the repo, all
+passing (run with the system Python 3.14 on Liam's machine).
+Not done, as it isn't part of this task: fitting P at the new lags (Week 8, which needs only these
+tables); issue e (end positions for "left R" rows need readings from outside R, which the region
+cache doesn't hold).
+For the team to confirm (both were the AI's choice; see the 2026-10-29 Week 7 AI log entry):
+  (1) the lags: 5, 10, 30, 60 and 90 days;
+  (2) committing the five new tables to git (about 56 MB in all, like the 15-day table) so nobody
+      needs the 9-minute region cache to use them. The alternative is to keep them local and
+      rebuild with the command above.
+Merging: week7-quant and this branch both add a status block here and edit "Where we are" and
+the AI log, so whichever is merged second will conflict in project_plan.txt and
+logs/ai_use_log.md (week7-quant already conflicts with main in those two files; its code merges
+cleanly). Keep both sides.
+
 Week 8 - Robustness
 - Computational + Quantitative: rerun across grid sizes (1/2/4 deg) and lags; drogue sensitivity
   (all drifters vs undrogued only at 4 deg, decision 6a, plus drogued vs undrogued where both
@@ -591,6 +677,8 @@ Week 8 - Robustness
   on R"). Optional, only if Week 7 finished on time: hexagonal cells as a cell-shape check (needs
   a new cell_index() and the h3 package). At 1 deg, define the coastal cells from the 1:10m
   coastline rather than the 1:110m one (see the coastal-cells limitation in Week 6 Computational).
+  Tables at 5, 10, 30, 60 and 90 days already exist (Week 7 Computational); lag_summary.csv shows
+  what each lag costs in data at each grid, as a starting point for choosing the lags.
 - Business: finish the seasonal forecasting story and plan how the report frames it.
 - Output: a robustness section showing results across several settings, not one.
 
@@ -664,7 +752,8 @@ in logs/ai_use_log.md).
    19.3M readings in under 2 minutes, and the transition table is smaller again (about one row
    per drifter-day). The subsample and the "full data later" week are dropped. Remaining runtime
    risk: the Week 8 region swap (a new ~9 min extract per region). The bootstrap turned out cheap:
-   1000 refits of the 2 deg P take about 1.5 minutes (Week 6, 2026-10-29). WE NEED TO DOUBLE CHECK IF THESE NUMBERS (e.g. 10mins, 2mins) ARE STILL TRUE
+   1000 refits of the 2 deg P take about 1.5 minutes (Week 6, 2026-10-29). Building the table at
+   six lags with its checks takes 2-3 minutes (Week 7, 2026-10-29). WE NEED TO DOUBLE CHECK IF THESE NUMBERS (e.g. 10mins, 2mins) ARE STILL TRUE
    BEFORE USING IN README
 
 5. Coarse baseline at 4 deg.

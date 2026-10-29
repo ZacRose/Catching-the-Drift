@@ -124,3 +124,22 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - the four choices above;
   - the bootstrap understates uncertainty for cells with only 1-2 drifters (documented in `bootstrap.py`);
   - environment: the tests and scripts were run in the `DATA3001` conda environment (Python 3.11), not the Python 3.14 that `environment.yml` names.
+
+## 2026-10-29 - Week 7 Computational: transition tables at other time steps (Claude Code)
+- **Asked (Liam):** implement the Week 7 Computational task in full ("build the transition table at other time steps"), make every script, output and plan entry clear to the team, and update the plan, CLAUDE.md and this log. `week7-quant` is pushed but deliberately not merged; the team will merge it themselves.
+- **Produced (branch `week7-comp`, from main at pull request #11):**
+  - `src/gridding/lags.py`: builds the table at 5, 10, 15, 30, 60 and 90 days with the existing `build_transitions`, runs three checks (rebuild of the committed 15-day table, composition a + b, brute-force lookups), and writes `outputs/results/lag_checks.csv`, `lag_summary.csv` and `outputs/figures/lag_summary.png`.
+  - `data/processed/transitions_tau{5,10,30,60,90}d.npz` (about 11 MB each, same format as the 15-day table). The 15-day file is untouched.
+  - `transitions.table_path()`, so every lag's file is named in one place; `tests/test_comp_week7.py` (5 tests); the plan's "Where we are", Week 4 and Week 6 status lines (now on main), a "Week 7 status - Computational" block, a Week 8 note and decision 4's runtime.
+- **Choices made by the AI (for the team to confirm):**
+  - the lags: 30 days for the Markov check, 90 days for the 3-month headline map, 60 days in between, and 5 and 10 days for the Week 8 shorter-step and 1 deg checks;
+  - committing the five new tables (about 56 MB in all) so teammates without the region cache can use them;
+  - adding the 1 deg grid to the summary, because Week 8 reruns at 1 deg;
+  - not fitting P at the new lags, which is Week 8's job.
+- **Checked:**
+  - Every check passed: the rebuilt 15-day table is identical to the committed one; 0 composition mismatches over 3.0 million checked starts; 0 brute-force mismatches in 600 rows. The 15-day summary row reproduces the Week 3 numbers.
+  - `week7-quant`'s `markov_check.chain_transitions` was run, in a temporary worktree that has since been removed, against the new 30-day table. They agree on 99.75% of rows, and every difference is a case its docstring says chaining can't settle (exit share 2.22% chained vs 2.11% real).
+  - A dry-run merge (`git merge-tree`) shows `week7-quant` already conflicts with main only in `project_plan.txt` and this log, and its code merges cleanly.
+  - 47 tests pass. The figure was inspected by eye, and its first version had a caption overlapping the axis labels, which was fixed. The figure's colours passed a colour-blind check, and each line also has its own marker shape.
+- **Results:** longer steps lose starts to ended records (2.4% at 15 days, 4.9% at 30, 14.5% at 90, only 1.2 points of which is the dataset stopping), so long-lag matrices rest on longer-lived drifters. Adequate 2 deg cells drop from 41% to 31% between 15 and 90 days. 1 deg is under 3% adequate at every lag. At 5 days, 79% of 4 deg moves stay in their cell.
+- **Still to verify by the team:** the four choices above; and the environment. Everything ran in the system Python 3.14.5 on Liam's machine (Week 6 used a Python 3.11 conda environment). The committed 15-day table rebuilt identically here, but the scripts weren't rerun under 3.11.
