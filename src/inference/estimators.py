@@ -35,8 +35,8 @@ baseline). Four transition matrices, each (n_states x n_states) with the last st
    training drifter reached, doesn't score -inf. Persistence at its best setting (eps = 0.7 at 2 deg) means "stay with 30%,
    otherwise jump anywhere in the box", which is easy to beat; this one isn't.
 
-shrinkage_fit.py fits the shrinkage model on all drifters (the product); the bootstrap for its
-uncertainty comes later.
+shrinkage_fit.py fits the shrinkage model on all drifters (the product); bootstrap.py gives its
+uncertainty by refitting it on drifters resampled with replacement.
 """
 import numpy as np
 

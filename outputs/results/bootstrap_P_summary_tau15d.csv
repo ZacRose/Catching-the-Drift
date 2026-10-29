@@ -1,0 +1,7 @@
+model,cells,n_cells,median_row_tv,median_max_entry_se,pct_cells_max_entry_se_le_0.05,median_stay_se,median_stay_se_ratio_to_independent_moves
+2 deg shrinkage (alpha 56.2),all with drifters,596,0.0796,0.0397,71.3,0.0371,3.12
+2 deg shrinkage (alpha 56.2),under 100 drifters,349,0.0885,0.0492,53.3,0.0456,3.16
+2 deg shrinkage (alpha 56.2),100+ drifters,247,0.0682,0.031,96.8,0.0285,3.09
+4 deg naive,all with drifters,161,0.034,0.0254,89.4,0.0249,3.4
+4 deg naive,under 100 drifters,34,0.0682,0.0503,50.0,0.0503,3.25
+4 deg naive,100+ drifters,127,0.0309,0.0224,100.0,0.0221,3.43

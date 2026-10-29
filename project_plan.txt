@@ -9,23 +9,21 @@ Deadlines: Week 4 proposal/README (15%, DONE) -> Week 5 poster + peer review (20
 peer review in progress outside the repo) -> Week 10 presentation (10% group + 15% individual)
 -> exam period final report (40%, max 30 pages).
 Submitted versions: docs/proposal/DATA3001 Project Proposal.pdf and
-docs/poster/DATA3001 Group 2 A1 Poster.png (not yet committed). The proposal's research
+docs/poster/DATA3001 Group 2 A1 Poster.png. The proposal's research
 questions, objectives and timeline (its sections 2 and 5) are what we committed to; Weeks 6-10
 below follow them.
 
-Where we are (2026-10-21, Week 6):
-- Done: Weeks 1-3 (merged to main), the proposal and the poster. Peer review is being done
-  outside the repo.
-- Week 6 Quantitative: done (see "Week 6 status" in section 5). It covers the neighbour-only
-  baseline, scores split by sparse and well-sampled cells, the 2 deg shrinkage model fitted on all
-  drifters, and the effective-sample-size map. The team should check the two choices flagged there.
-- Week 6 Computational (coastal cells, poster fixes, drifter bootstrap) and Business (RQ4
-  seasonal forecast): nothing in the repo yet.
-- Not yet on main: the Week 4 release map (branch week4-release-map, pushed); the Week 5 poster
-  map, a tidy-up and the Week 6 Quant work (uncommitted on week5-poster-map; to be split into
-  week5 and week6-quant commits).
-- Next to unblock others: the drifter bootstrap (issues c and i), since every "model A beats
-  model B" claim needs its intervals; and the coastal cells (issue a), which the release maps need.
+Where we are (2026-10-29, Week 6):
+- Done: Weeks 1-3, the proposal and the poster. Week 5 poster map and Week 6 Quantitative are on
+  main (pull requests #9 and #10). Peer review is being done outside the repo.
+- Week 6 Computational: done apart from the poster fixes (see "Week 6 status - Computational" in
+  section 5): Benguela coastal cells, release maps from them, and the drifter bootstrap with
+  intervals on P, on every held-out score and on the release maps. On branch week6-computational,
+  not yet committed or reviewed; the Week 4 release map (branch week4-release-map) is merged into it.
+- Week 6 Business (RQ4 seasonal forecast): nothing in the repo yet.
+- The team should check the choices flagged in both Week 6 status blocks.
+- Poster fixes: the poster feedback isn't recorded in the repo, so this part of Week 6 is waiting
+  on it.
 
 Contents: Sections 1-4 outline what we are doing and who does what. Section 5 is the
 week-by-week plan and what has been done so far. Section 7 lists key decisions we have made and
@@ -378,11 +376,11 @@ Week 4 status - DONE (proposal submitted 2026-10-08; README.md is still title-on
   sparse and well-sampled cells; O4 documented, tested code that runs on other regions.
 - Users named in the proposal: the Benguela Current Convention and national spill-contingency
   planners, using P as a weeks-to-a-year planning tool, not an hourly forecast.
-- Figure 1 (src/linalg/release_map.py, branch week4-release-map, pushed but NOT yet merged into
-  main): drifters per 2 deg cell, and where material released in the 4 deg cell 26-30S, 12-16E
+- Figure 1 (src/linalg/release_map.py, branch week4-release-map; merged into week6-computational
+  on 2026-10-29, not yet on main): drifters per 2 deg cell, and where material released in the 4 deg cell 26-30S, 12-16E
   is after P^6 and P^24 (naive 4 deg P). Centre after 3 months near 25S, 3E (about 1,150 km
   west-northwest); after a year near 25S, 15W, with 1.3% gone from the box. The release cell is
-  the provisional release_point in config/region.yaml on that branch (issue a still open).
+  the provisional release_point in config/region.yaml (issue a, settled in Week 6).
 - Issues c, g, h, i, j and k are now settled in the proposal's methods text (drifter bootstrap
   for uncertainty; a neighbour-only baseline; scores split by cells under and over 100 drifters;
   alpha = 56 described as about four drifters; "empirical Bayes" stated), but none is in code yet.
@@ -409,7 +407,7 @@ Week 5 - Poster (20%, includes written peer review of two other groups' posters)
 Week 5 status - poster DONE; peer review in progress (outside the repo)
 - Poster "Transport in South Atlantic Gyre": proposal sections 1-4 on one A1 page, with the
   Figure 1 panels, the adequacy bar chart, the drogue adequacy table and a new study-region map.
-- New figure: src/gridding/trajectory_map.py (branch week5-poster-map, not yet committed) draws
+- New figure: src/gridding/trajectory_map.py (on main since pull request #9) draws
   daily drifter tracks inside the box, mean-flow arrows on 4 deg cells with at least 100 drifters,
   and the box, on a Natural Earth coastline (data/external/ne_110m_land.geojson). 2 new tests;
   24 pass on that branch. week5-poster-map was branched from main, so it doesn't have
@@ -431,8 +429,7 @@ Week 6 - Poster feedback, start the real inference (proposal timeline, plus the 
 - Output: working 2 deg estimates with uncertainty on at least some cells, poster feedback
   included.
 
-Week 6 status - Quantitative DONE (2026-10-21, uncommitted on week5-poster-map; not yet
-reviewed by the team)
+Week 6 status - Quantitative DONE (2026-10-21; on main since pull request #10)
 Run: python3 -m src.inference.evaluate, then python3 -m src.inference.shrinkage_fit (seconds each).
 1. Neighbour-only baseline (issue g): estimators.neighbour_P. Stay with probability "stay", move
    to a touching ocean cell, plus a small "leak" to every other state so no move scores -inf;
@@ -479,7 +476,100 @@ For the team to confirm (both were the AI's choice; see the 2026-10-21 AI log en
       (22% adequate), because each model is fitted on 80% of drifters.
   (2) Effective drifters = own drifters + alpha / 15, using the median moves per drifter in a
       cell. A per-cell ratio would be the alternative.
-Still open for Quant: intervals on every score (issue i, needs the Computational bootstrap).
+Intervals on every score (issue i): done with the Computational bootstrap, see the next block.
+
+Week 6 status - Computational DONE except the poster fixes (2026-10-29, branch week6-computational;
+not yet committed or reviewed by the team)
+Run, after src.inference.shrinkage_fit: python3 -m src.gridding.coast, then src.inference.bootstrap
+(about 1.5 minutes), src.inference.score_intervals and src.linalg.coastal_release (under 30 seconds
+each). Tests run in the DATA3001 conda environment.
+1. Benguela coastal cells (issue a; src/gridding/coast.py, coastal_zone in config/region.yaml).
+   A cell is coastal if it lies between 34S and 18S (east of 0E) and the coastline passes through
+   it: part land, part sea on the Natural Earth 1:110m outline. 34S-18S covers the main upwelling
+   (roughly 19-34S, proposal ref [5]) and falls on 2 and 4 deg cell edges. Result: 13 cells at
+   2 deg (9 with drifters) and 6 at 4 deg (5 with drifters), listed in
+   outputs/results/coastal_cells.csv. Drifters seldom come this close to the shore: the 9 sampled
+   2 deg coastal cells have 2-71 drifters each (none adequate), and two between 18S and 22S have none.
+   Limitation (for the report): the 1:110m outline is made for world maps, so the shoreline is
+   simplified and small headlands, bays and islands are smoothed away. That's fine for 2 and 4 deg
+   cells (about 200-400 km), but a cell the coast only grazes can flip in or out: two of the 13
+   are borderline (cell 198 is 0.5% land, cell 475 is 1.6%). The error hasn't been measured here.
+   For finer cells (the 1 deg Week 8 rerun), swap in Natural Earth's 1:10m land file; the code
+   takes the file as an argument (coast.land_paths), so nothing else changes.
+2. Groundings at the coast (issue d; outputs/results/coastal_outcomes_tau15d.csv). Of the starts
+   in the 2 deg coastal cells, 2.9% have a record that ends within 15 days (rest of R: 2.4%) and
+   1.9% end because the drifter ran aground (rest of R: 0.36%). Groundings do cluster at the coast,
+   at five times the rate elsewhere, so coastal rows of P overstate how much stays at sea by about
+   2% per step and the coastal-zone probability is a lower bound, as the proposal says. But the
+   1.9% is 32 starts from 5 drifters; most of the box's groundings are on the Brazilian coast.
+   Optional "ran aground" state: not built. Five drifters can't support an estimated grounding
+   probability, and an extra state would change every matrix Quant uses (the last state is
+   "left R"). The share above is reported instead.
+3. Drifter bootstrap (issues c and i; src/inference/bootstrap.py). Each replicate draws the
+   drifters with replacement and redoes the calculation exactly as on the real data: 1000
+   replicates, fixed seed, 95% percentile intervals. replicate_matrices() yields a refitted P per
+   replicate, so any quantity computed from P gets an interval the same way (the release maps
+   below; the Week 7 long-run pattern can do the same). 1000 refits of the 2 deg P take about
+   1.5 minutes in under 250 MB, so the Week 7 scaling concern (decision 4) is settled.
+   a. Uncertainty in P (objective O1): data/processed/shrinkage_P_2deg_tau15d_bootstrap.npz and
+      naive_P_4deg_tau15d_bootstrap.npz hold a standard error and 95% interval for every entry of
+      P, and per cell row_tv_median: the median share of the cell's material that a different
+      sample of drifters would send somewhere else. For the shrinkage model the 4 deg prior is
+      rebuilt on every replicate and alpha stays at 56.2. 2 deg median row_tv: 0.07 in cells with
+      100+ drifters, 0.09 under 100. Figure: outputs/figures/bootstrap_uncertainty_map.png;
+      numbers: outputs/results/bootstrap_P_summary_tau15d.csv.
+   b. What it says about earlier decisions:
+      - Issues c and j: the bootstrap SE of a cell's stay probability is 3.1 times (2 deg
+        shrinkage) and 3.4 times (4 deg naive) the SE that treats every daily move as independent.
+        Intervals built on the raw move counts, Bayesian or not, would be about 3 times too narrow.
+      - Decision 3: in cells with 100+ drifters, every entry of P has a bootstrap SE of at most
+        0.05 in 96.8% of 2 deg cells and 100% of 4 deg cells; in thinner cells, about half do. The
+        N = 100 rule holds up on the real data.
+   c. Limitation: the bootstrap can't show variation the data don't contain, so a cell with only
+      1-2 drifters can look nearly certain. Read intervals for cells under about 10 drifters as
+      unreliable, next to start_drifters.
+4. Intervals on the held-out scores (issue i; src/inference/score_intervals.py,
+   outputs/results/score_intervals_tau15d.csv, outputs/figures/score_intervals.png). The 378 test
+   drifters are resampled and the models, fitted as in evaluate.py, are held fixed. evaluate.py now
+   exposes fit_models() for this; its CSV is unchanged. Paired differences per move with 95%
+   intervals (positive = the first model is better), 2 deg:
+       shrinkage minus neighbour-only       all +0.90 (0.83 to 0.98); under 100 +0.85; 100+ +0.94
+       shrinkage minus naive, on the moves naive can score
+                                            all -0.008 (-0.010 to -0.0065)
+                                            under 100 -0.015 (-0.018 to -0.011)
+                                            100+ -0.004 (-0.005 to -0.003)
+   At 4 deg, naive minus neighbour-only on the moves naive can score: +0.43 (0.41 to 0.46).
+   What this says: every gap in the Week 6 Quant table holds up for these test drifters, including
+   the small one. On the moves naive P can score, shrinkage is reliably (if slightly) worse, most
+   of all in thin cells. So shrinkage wins only because naive P gives 0.76% of test moves
+   probability 0; quote it that way. These intervals hold the models fixed, so they leave out the
+   variation from fitting on other training drifters (part 3 covers that for P).
+5. Release maps from the coast (src/linalg/coastal_release.py, outputs/figures/
+   coastal_release_tau15d.png, outputs/results/coastal_release_tau15d.csv). Material is spread
+   evenly over the sampled coastal cells. 2 deg shrinkage P, with 95% intervals:
+       after 15 days    in coastal zone 31% (21.6-37.5)    left box 0.001%
+       after 3 months   in coastal zone 0.63% (0.25-1.5)   left box 0.25% (0.11-0.58)   centre 23.5S, 4.8E
+       after 1 year     in coastal zone 0.006%             left box 0.89% (0.61-1.5)    centre 22.9S, 16.8W
+   The 4 deg naive baseline tells the same story (centre 24.0S, 16.0W after a year) but keeps more
+   in the coastal zone (58% after 15 days, since a 4 deg coastal cell reaches about 400 km
+   offshore) and loses more from the box (2.3%, 1.8-3.0, after a year). Material leaves the coast
+   within weeks and moves west across the gyre, and almost none is back at the coast after a year.
+   Issue b: this release loses no mass to row-less 4 deg cells, and the shrinkage P has a row for
+   every cell; at most 0.09% of the 2 deg material is in cells with no drifters (prior-only rows)
+   at any step. Proposal Figure 1 (release_map.py, release_point) still reproduces exactly.
+6. Not done: "fix issues raised at the poster". The feedback isn't recorded in the repo; add it here
+   (or in docs/poster/peer-review/) so it can be worked through.
+Tests: tests/test_comp_week6.py, 10 tests (resampling, replicate counts against hand counts, row
+blocks, empty rows, resampled means, coastal cells, issue d shares, release over several cells).
+42 tests in the repo, all passing. An independent check rebuilt two replicates by literally copying
+the drawn drifters' rows: counts identical to the fast method at 2 and 4 deg.
+Open issues still open after Week 6: e (end positions for "left R" rows, end-of-window drogue
+status) and f (decision 8 evidence in code).
+For the team to confirm (all were the AI's choice; see the 2026-10-29 AI log entry):
+  (1) the coastal zone: the 34S-18S band and the "coastline passes through the cell" rule;
+  (2) releasing evenly over the sampled coastal cells (not by area or by drifters);
+  (3) alpha held at 56.2 in the bootstrap rather than re-chosen on every replicate;
+  (4) 1000 replicates and percentile intervals.
 
 Week 7 - Full model
 - Quantitative: fit the model across the whole grid; run the Week 3 evaluation (naive vs
@@ -488,8 +578,8 @@ Week 7 - Full model
   pattern as the quasi-stationary distribution (P restricted to cells inside the box, since
   "left R" absorbs everything in the end) and mixing time, divided by cell area when shown as a
   density.
-- Computational: build the transition table at other time steps; pipeline changes needed at
-  scale (e.g. the bootstrap refits P hundreds of times).
+- Computational: build the transition table at other time steps. (The bootstrap's scaling, 1000
+  refits of P, was handled in Week 6.)
 - Business: continue the seasonal forecast, including the train/test split.
 - Output: a draft product - P plus its uncertainty, in a form another analyst could pick up.
 
@@ -499,7 +589,8 @@ Week 8 - Robustness
   have data); years sensitivity (2010+
   only, a filter on start_time); run the code unchanged on a different region ("nothing depends
   on R"). Optional, only if Week 7 finished on time: hexagonal cells as a cell-shape check (needs
-  a new cell_index() and the h3 package).
+  a new cell_index() and the h3 package). At 1 deg, define the coastal cells from the 1:10m
+  coastline rather than the 1:110m one (see the coastal-cells limitation in Week 6 Computational).
 - Business: finish the seasonal forecasting story and plan how the report frames it.
 - Output: a robustness section showing results across several settings, not one.
 
@@ -572,8 +663,8 @@ in logs/ai_use_log.md).
    run. load_region() now extracts R once (~9 min) and caches it, so every script runs on all
    19.3M readings in under 2 minutes, and the transition table is smaller again (about one row
    per drifter-day). The subsample and the "full data later" week are dropped. Remaining runtime
-   risks: the Week 7 bootstrap (hundreds of refits) and the Week 8 region swap (a new ~9 min
-   extract per region). WE NEED TO DOUBLE CHECK IF THESE NUMBERS (e.g. 10mins, 2mins) ARE STILL TRUE
+   risk: the Week 8 region swap (a new ~9 min extract per region). The bootstrap turned out cheap:
+   1000 refits of the 2 deg P take about 1.5 minutes (Week 6, 2026-10-29). WE NEED TO DOUBLE CHECK IF THESE NUMBERS (e.g. 10mins, 2mins) ARE STILL TRUE
    BEFORE USING IN README
 
 5. Coarse baseline at 4 deg.

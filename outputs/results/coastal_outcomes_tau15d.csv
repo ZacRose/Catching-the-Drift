@@ -1,0 +1,5 @@
+cell_size_deg,starts_in,starts,drifters,pct_stayed_in_R,pct_left_R,pct_record_ended,pct_gap_in_record,pct_ended_and_ran_aground,drifters_ended_and_ran_aground
+2.0,coastal cells,1658,98,95.6,0.0,2.9,1.51,1.93,5
+2.0,rest of R,801710,1969,95.24,1.45,2.44,0.86,0.36,206
+4.0,coastal cells,4202,175,97.0,0.0,2.21,0.79,0.76,5
+4.0,rest of R,799166,1967,95.23,1.46,2.45,0.87,0.37,206
