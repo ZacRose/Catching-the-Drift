@@ -17,8 +17,9 @@ Each row's "outcome" says what was found tau after the start:
     2 ENDED   the drifter's record stopped before start + tau: destination unknown.
     3 GAP     start + tau falls in a gap in the drifter's record: destination unknown.
 Only 0 and 1 are counted. 2 and 3 stay in the table rather than being dropped, so their
-share can be reported and, with typedeath (1 = ran aground), a coastline state can be
-added in Week 6.
+share can be reported, with typedeath (1 = ran aground) for groundings. Week 6 measured these at
+the coast (src/gridding/coast.py): too few drifters run aground there to estimate a separate
+coastline state, so their share is reported instead.
 
 tau defaults to 15 days: the time a median-speed drogued drifter takes to cross a 2 degree
 cell north to south (data_quality.py). The same tau is used at every grid size so that

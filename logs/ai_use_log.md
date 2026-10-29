@@ -55,6 +55,18 @@ One entry per session: what was asked, what the AI produced, and what we checked
 - **Checked:** an AI literature search checked each source against Crossref metadata, abstracts and the BCC web page. Full texts were blocked, so nothing was read in full. Results: Hutchings et al. 2009 is consistent with its abstract, though the four components need confirming. Drouin & Lozier 2019 abstract names only GDP drifters and OSCAR, with no subsurface floats, and its headline is a sizeable Drake Passage share of Benguela water. The BCC page lists the activities but doesn't call shipping "major"; it does flag international shipping routes as a pollution risk. Novelli et al. 2020 is accurate, but the drifters were probably CARTHE, not GDP buoys.
 - **Still to verify by the team:** read all four papers in full before the README cites them; source the offshore-oil point; add the client case; confirm the GDP drogue depth from `gdp-overview.pdf`.
 
+## 2026-10-06 - Proposal Draft 1 review, Draft 2, and the release-map figure (Claude Code)
+- **Asked:** mark the team's Proposal Draft 1 (PDF) against the four proposal criteria (clarity, significance, likelihood of success, feasibility); check every citation and number; suggest how to fit figures into 3 pages; judge whether it reads as human-written; say whether the data counts will change. Then write a 3-page Draft 2 with every change highlighted (kept outside the repo, in the workspace folder), and add the code for its new figure to the repo.
+- **Produced:**
+  - Draft 2 PDFs (highlighted and clean) and a change list, outside the repo. Main changes: named users and an honest planning-tool scope; an Objectives paragraph; the 3.3% unknown destinations framed as the missing data; a softer literature-gap claim; RQ3 caveat; a Week x stream timeline; the bar chart replaced by a three-panel map.
+  - `src/linalg/release_map.py` (Figure 1: drifters per 2 deg cell; where material released in one 4 deg cell is after P^6 and P^24); `release_point` in `config/region.yaml`; `tests/test_release_map.py` (3 tests on a toy matrix). Output: `outputs/figures/release_map_tau15d.png`. Branch `week4-release-map`, not yet committed.
+- **Checked:**
+  - Citations read in full where available: McAdam & van Sebille 2018 (Europe PMC full text: §1, §2.1, §2.2, eq. 2, §3.1 all support our sentences); Drouin & Lozier 2019 (NSF PAR PDF: pp. 7082, 7085, 7088-89, 7091-92 support ours, with two wording fixes: the Benguela "sources its waters from" those inflows, and they keep each drifter only until drogue loss); van Sebille et al. 2012 (IOP PDF: §2.1 pools drifters; the coastal release is in §2.3, not §2.2); the BCC page and the World Oil article (all claims present; World Oil says "one of the most active deepwater exploration areas globally", not "global hotspot"). Hutchings et al. 2009 (19-34 deg S) and Novelli et al. 2020 (wave tank, 25% vs 5% landfall) checked against abstracts only. All [1] claims checked against `gdp-overview.pdf`.
+  - Every number in the draft matches the plan and committed CSVs, except one wording fix: tau is the time a median-speed drogued drifter takes to cross a 2 deg cell north to south (not "the median crossing time").
+  - Release map, release cell 26-30 deg S, 12-16 deg E: 34.9% still in the cell after 15 days; centre of the remaining material at 24.6 deg S, 3.1 deg E after 90 days and 24.9 deg S, 15.0 deg W after 360 days; 1.3% left R after a year; no mass lost to row-less cells from this start. 25/25 tests pass. Figure inspected by eye.
+- **Not verified:** Garcia-Pineda et al. 2020 (the paper was blocked): the "drogued at approximately 0.5 metres" claim is unconfirmed, and one search snippet mentions currents at 1 m.
+- **Still to verify by the team:** the [9] drogue depth (read §2.1 via the library or reword); the dataset access date; stream owners in the timeline; the release point is provisional until open issue (a) defines the coastal cells.
+
 ## 2026-10-12 - Poster study-region map (Claude Code)
 - **Asked:** replace the poster's plain box map with drifter tracks plus the box, following a teammate's peer feedback, so one figure shows the data, the region and the Benguela flow.
 - **Produced:** `src/gridding/trajectory_map.py` (daily tracks, mean-flow arrows on 4° cells with at least 100 drifters, region box), `tests/test_trajectory_map.py` (2 tests), `outputs/figures/trajectory_map.png`, and the Natural Earth 1:110m land outline in `data/external/` (cartopy could not be installed on Python 3.14, so the coastline is drawn with plain matplotlib).
@@ -82,3 +94,33 @@ One entry per session: what was asked, what the AI produced, and what we checked
 - **Checked:** 29 tests pass. The Week 3 "all" rows of the evaluation CSV and `alpha_sensitivity.png` reproduce exactly. The refitted counts match `transition_counts_2deg_tau15d.npz` exactly. Every row of the fitted P sums to 1 with no zeros. The figure was inspected by eye.
 - **Still to verify by the team:** the split definition and the effective-sample-size formula. Results: shrinkage beats neighbour-only by about 0.9 per move, and the prior is worth only 3.75 drifters (41.3% -> 44.0% adequate). None of the score gaps has an interval yet (issue i).
 - **End of session (2026-10-21):** nothing is committed. Everything from both 2026-10-21 entries is uncommitted on `week5-poster-map`, and Liam will split it into week5 and `week6-quant` commits. `project_plan.txt` (the "Where we are" paragraph and the "Week 6 status" block) and the workspace `CLAUDE.md` record the state for the next session. 29 tests pass.
+
+## 2026-10-29 - Week 6 Computational: coastal cells, drifter bootstrap, coastal release maps (Claude Code)
+- **Asked (Zac):** pull the latest repo; explain the bootstrap; then implement Week 6 Computational from `project_plan.txt` in full, without mistakes, and update this log and the plan. Zac asked not to bring in `week7-quant`.
+- **Produced (branch `week6-computational`, from main):**
+  - Liam's `week4-release-map` merged in, since Week 6 redraws its maps. The only conflict was this log; his 2026-10-06 entry now sits in date order. His Figure 1 numbers reproduce exactly.
+  - `src/gridding/coast.py` and `coastal_zone` in `config/region.yaml` (issue a): coastal cells are those between 34S and 18S that the coastline passes through on the Natural Earth outline. Gives 13 cells at 2 deg, 9 with drifters. It also reports issue d (groundings at the coast). Outputs: `coastal_cells.csv`, `coastal_outcomes_tau15d.csv`.
+  - `src/inference/bootstrap.py` (issues c, i): resamples whole drifters; 1000 replicates; a fast weighted count per replicate; per-entry SE and 95% intervals for the 2 deg shrinkage P and the 4 deg naive P, computed in row blocks to stay under 250 MB. Outputs: `*_bootstrap.npz` in data/processed, `bootstrap_P_summary_tau15d.csv`, `bootstrap_uncertainty_map.png`.
+  - `src/inference/score_intervals.py` (issue i): intervals on every held-out score and on every paired model difference, from resampling the test drifters. `evaluate.py` gained `fit_models()`, split out of `evaluate_grid()`. Outputs: `score_intervals_tau15d.csv`, `score_intervals.png`.
+  - `src/linalg/coastal_release.py`: P, P^6 and P^24 from the coastal cells for the 4 deg naive and 2 deg shrinkage matrices, each with bootstrap intervals. `release_map.propagate` can now spread a release over several cells. Outputs: `coastal_release_tau15d.csv`, `coastal_release_tau15d.png`.
+  - `tests/test_comp_week6.py` (10 tests); docstring updates in `estimators.py`, `transitions.py` and `release_map.py`; plan updated (where we are, the Week 6 Computational status block, decision 4 runtime, stale branch notes).
+- **Choices made by the AI (for the team to confirm):**
+  - coastal band 34S-18S, from the proposal's cited 19-34S upwelling, and the "coastline passes through" rule. Drifters rarely reach the shore, so these cells are thin (2-71 drifters).
+  - no "ran aground" state: only 5 drifters ran aground in the coastal cells (32 starts), too few to estimate it, so the share is reported instead;
+  - the release is spread evenly over the coastal cells that have drifters;
+  - alpha is held at 56.2 in the bootstrap, with the prior rebuilt each replicate; percentile intervals.
+- **Checked:**
+  - 42 tests pass, 10 of them new. One new test failed at first because its own reference calculation was wrong, not the code. Another exposed a float32 rounding in the row distances, which are now measured in float64.
+  - Two replicates were rebuilt by literally copying the drawn drifters' rows: counts identical to the fast method at 2 and 4 deg. Replicates are reproducible, and every replicate row sums to 1.
+  - The refitted 2 deg P matches the saved product. Coastal cell drifter counts match the committed `start_drifters`. `evaluation_tau15d.csv` is byte-identical after the `evaluate.py` change, and all 54 point estimates in `score_intervals_tau15d.csv` match it exactly. Cell totals (596 sampled, 247 adequate at 2 deg; 161/127 at 4 deg) match the adequacy outputs. All figures were inspected by eye.
+  - Regenerated `alpha_sensitivity.png` and `release_map_tau15d.png` differ from the committed files only in rendering (a 1-pixel height difference, anti-aliasing), so the committed versions were kept.
+- **Results:**
+  - The bootstrap SE is about 3 times the SE from treating moves as independent.
+  - Decision 3 holds: 97% of adequate 2 deg cells and all adequate 4 deg cells have every SE at or below 0.05.
+  - Shrinkage beats neighbour-only by 0.90 (0.83 to 0.98). On the moves naive can score it is reliably worse, by 0.008 (0.0065 to 0.010).
+  - Coastal releases mostly leave the coastal zone within 3 months (0.63% left) and are centred near 23S, 17W after a year, with 0.89% (0.61-1.5) gone from the box.
+- **Not done:** "fix issues raised at the poster": the feedback isn't in the repo. Nothing is committed yet.
+- **Still to verify by the team:**
+  - the four choices above;
+  - the bootstrap understates uncertainty for cells with only 1-2 drifters (documented in `bootstrap.py`);
+  - environment: the tests and scripts were run in the `DATA3001` conda environment (Python 3.11), not the Python 3.14 that `environment.yml` names.

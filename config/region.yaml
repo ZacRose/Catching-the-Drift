@@ -5,3 +5,17 @@ lat_max: -4
 lon_min: -60
 lon_max: 20
 cell_size_deg: 2.0
+# Release point (lat, lon) for the Week 4 release map (proposal Figure 1): off southern Namibia, in
+# the 4 deg cell 26-30S, 12-16E. Kept so that figure reproduces; the Week 6 maps release from the
+# coastal zone below instead (src/linalg/coastal_release.py).
+release_point: [-28.0, 14.0]
+# Coastal zone (Week 4 issue a): the cells inside this band that the coastline passes through
+# (part land, part sea on the Natural Earth outline; src/gridding/coast.py). 34S-18S covers the
+# Benguela's main upwelling, roughly 19S-34S (Hutchings et al. 2009, proposal ref [5]), and both
+# edges fall on cell edges of the 2 and 4 deg grids. lon_min keeps South America's coast out.
+coastal_zone:
+  label: Benguela coast
+  lat_min: -34
+  lat_max: -18
+  lon_min: 0
+  lon_max: 20

@@ -2,8 +2,9 @@
 evaluate.py
 
 Related task: Week 3 Quantitative - the evaluation design, run once as a preliminary
-check (Week 7 reruns it on the final model, alongside the bootstrap). Week 6 added the
-neighbour-only baseline and the split by sparse and well-sampled cells (open issues g and h).
+check (Week 7 reruns it on the final model). Week 6 added the neighbour-only baseline and the
+split by sparse and well-sampled cells (open issues g and h); the intervals on these scores (issue i)
+come from score_intervals.py, which reuses fit_models() and the drifter bootstrap.
 
 Score = held-out log-likelihood: the average of log P(start -> end) over the test drifters'
 transitions. Higher is better, and it rewards a model for putting probability where drifters
@@ -94,12 +95,14 @@ def tune_alpha(counts_train, parent, s_va, e_va):
     return pick(ALPHAS, valid_ll, "alpha"), valid_ll
 
 
-def evaluate_grid(table, region, assignment, cell_size, coarse_size=None):
-    """Score naive, persistence, neighbour-only and (if coarse_size) shrinkage on one grid,
-    over all test transitions and separately for cells under and over N_MIN drifters.
+def fit_models(table, region, assignment, cell_size, coarse_size=None):
+    """Tune on train -> valid and refit on train + valid: naive, persistence, neighbour-only and
+    (if coarse_size) shrinkage on one grid, plus the test transitions and their cell groups.
 
     Returns:
-        (rows for the results table, alpha curve dict or None).
+        (models, test, curve): models maps name -> (setting, P); test is a dict of the test
+        transitions' start, end and drifter_id, and groups (name -> bool mask over them: all, and
+        cells under and over N_MIN drifters); curve is the alpha curve dict, or None.
     """
     s_tr, e_tr, n_cells, _ = states_for(table, region, cell_size, assignment, "train")
     s_va, e_va, _, _ = states_for(table, region, cell_size, assignment, "valid")
@@ -132,6 +135,19 @@ def evaluate_grid(table, region, assignment, cell_size, coarse_size=None):
     _, map_drifters = per_cell_counts(s_all, table["drifter_id"], n_cells)
     thin = map_drifters[s_te] < N_MIN
     groups = {"all": np.ones(s_te.size, dtype=bool), f"under {N_MIN} drifters": thin, f"{N_MIN}+ drifters": ~thin}
+    test = {"start": s_te, "end": e_te, "drifter_id": test_ids, "groups": groups}
+    return models, test, curve
+
+
+def evaluate_grid(table, region, assignment, cell_size, coarse_size=None):
+    """Score naive, persistence, neighbour-only and (if coarse_size) shrinkage on one grid,
+    over all test transitions and separately for cells under and over N_MIN drifters.
+
+    Returns:
+        (rows for the results table, alpha curve dict or None).
+    """
+    models, test, curve = fit_models(table, region, assignment, cell_size, coarse_size)
+    s_te, e_te, test_ids, groups = test["start"], test["end"], test["drifter_id"], test["groups"]
 
     # Also score every model only where naive is finite: a comparison on naive's own terms
     naive_finite = np.isfinite(log_lik(models["naive"][1], s_te, e_te))
