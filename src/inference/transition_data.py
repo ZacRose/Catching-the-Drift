@@ -28,7 +28,7 @@ TRANSITIONS_PATH = os.path.join(PROCESSED_DIR, f"transitions_tau{TAU_DAYS}d.npz"
 COLUMNS = ["drifter_id", "start_time", "start_lon", "start_lat", "end_lon", "end_lat", "drogued", "outcome"]
 
 
-def load_transitions(region, path=TRANSITIONS_PATH, verbose=True):
+def load_transitions(region, path=TRANSITIONS_PATH, verbose=True, rows=None):
     """The usable transitions as a dict of 1-D arrays (one entry per transition).
 
     Keeps rows whose destination is known ("stayed in R" or "left R") and adds a
@@ -38,6 +38,10 @@ def load_transitions(region, path=TRANSITIONS_PATH, verbose=True):
     Inputs:
         region: dict from config/region.yaml (used to sanity-check end positions).
         path: the .npz written by src/gridding/transitions.py.
+        rows: optional bool mask over the table's rows as saved (before any are dropped), to keep
+              only some starts. Row i is the same drifter-day start in every lag's table (Week 7
+              Computational), so a mask built from one lag's outcomes can be applied to another's
+              (markov_check.py uses this to compare lags on the same starts).
     Returns:
         dict with the COLUMNS names plus "exited"; start_time as datetime64.
     """
@@ -51,6 +55,10 @@ def load_transitions(region, path=TRANSITIONS_PATH, verbose=True):
     if missing:
         raise KeyError(f"{os.path.basename(path)} has no {missing} (it has {stored.files}).")
     table = {c: stored[c] for c in COLUMNS}
+    if rows is not None:
+        if rows.shape != table["outcome"].shape:
+            raise ValueError(f"rows has {rows.size} entries; {os.path.basename(path)} has {table['outcome'].size} rows.")
+        table = subset(table, rows)
 
     outcome = table["outcome"]
     if verbose:

@@ -92,13 +92,16 @@ def neighbour_P(n_lat, n_lon, ocean, stay, leak):
     return P
 
 
-def prior_rows(counts_fine, parent, smoothing=1.0):
+def prior_rows(counts_fine, parent, smoothing=1.0, split="arrivals"):
     """The prior row m_i for every fine state, built from the coarse parent grid.
 
     Inputs:
         counts_fine: training count matrix on the fine grid.
         parent: parent_states() map, fine state -> coarse state (exit -> exit).
         smoothing: total pseudo-transitions spread evenly over each coarse row.
+        split: how a coarse destination's mass is shared among its fine children. "arrivals" (the
+               product): by how often training drifters arrived in each child, + 0.5. "even": equally,
+               whatever the arrivals (Week 7 prior-sensitivity check, prior_sensitivity.py).
     Returns:
         (n_fine x n_fine) matrix whose rows sum to 1.
     """
@@ -112,7 +115,12 @@ def prior_rows(counts_fine, parent, smoothing=1.0):
 
     # Within each coarse destination, share its mass among fine children by arrivals
     # (+0.5 for every cell, so a cell no training drifter reached still gets a little)
-    weight = counts_fine.sum(axis=0) + 0.5
+    if split == "arrivals":
+        weight = counts_fine.sum(axis=0) + 0.5
+    elif split == "even":
+        weight = np.ones(n_fine)
+    else:
+        raise ValueError(f"split must be 'arrivals' or 'even', not {split!r}")
     weight[-1] = 1.0  # exit -> exit
     share = weight / np.bincount(parent, weights=weight)[parent]
 

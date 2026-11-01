@@ -1,0 +1,25 @@
+step,quantity,value,check
+table,usable moves,182090,
+table,drifters,726,
+table,% of moves leaving the box,5.33,
+adequacy,% of 2 deg cells with drifters that have 100+,55.6,
+evaluate,4 deg naive (): mean held-out log-lik,-inf,0.05% of test moves given 0
+evaluate,4 deg persistence (eps=0.5): mean held-out log-lik,-2.5792,0.0% of test moves given 0
+evaluate,4 deg neighbour (stay=0.5 leak=0.1): mean held-out log-lik,-1.9426,0.0% of test moves given 0
+evaluate,2 deg naive (): mean held-out log-lik,-inf,0.81% of test moves given 0
+evaluate,2 deg persistence (eps=0.7): mean held-out log-lik,-4.3251,0.0% of test moves given 0
+evaluate,2 deg neighbour (stay=0.3 leak=0.2): mean held-out log-lik,-2.9303,0.0% of test moves given 0
+evaluate,2 deg shrinkage to 4 deg (alpha=56.2): mean held-out log-lik,-2.2267,0.0% of test moves given 0
+shrinkage,alpha (chosen on validation),56.23,
+shrinkage,"rows sum to 1, no zeros in cell rows, exit absorbing",True,PASS
+bootstrap,"median row total variation, cells with 100+ / under 100 drifters",0.078 / 0.074,100 replicates
+coastal release,coastal cells / with drifters,13 / 11,
+coastal release,"after 15 days: % left box, % in coastal zone, centre","0.04, 38.65, (-29.2, -47.5)",
+coastal release,"after 90 days: % left box, % in coastal zone, centre","5.41, 5.67, (-33.6, -46.5)",
+coastal release,"after 360 days: % left box, % in coastal zone, centre","51.71, 0.60, (-34.5, -40.8)",
+markov check,"30 d held-out, direct minus chained per move",-0.049 (-0.063 to -0.036),
+long run,QSD by eigenvectors = by power iteration,True,PASS
+long run,years_in_box_expected,0.843,
+long run,years_tmix_from_coast,0.616,
+long run,qsd_centre_lat,-33.611,
+long run,qsd_centre_lon,-40.178,
