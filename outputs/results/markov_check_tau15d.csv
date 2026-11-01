@@ -1,0 +1,103 @@
+grid_model,lag_days,sample,check,quantity,cells,n_cells,chained,direct,direct_minus_chained,ci_low,ci_high,note
+4 deg naive,30,matched,held-out score,mean log-likelihood per test move (where both finite),all,,-1.77413,-1.74998,0.02414,0.01978,0.02812,"154,447 test moves, 364 test drifters; zero probability: chained 0.02%, direct 0.09%"
+4 deg naive,30,matched,per-cell,chance still in the start cell,all with drifters,161,0.27366,0.28335,0.0097,0.00375,0.01098,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,chance still in the start cell,under 100 drifters,34,0.2306,0.24416,0.01356,-0.00841,0.02105,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,chance still in the start cell,100+ drifters,127,0.28518,0.29385,0.00866,0.00527,0.01028,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,chance of having left the box,all with drifters,161,0.06031,0.05325,-0.00706,-0.00839,-0.00561,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,chance of having left the box,under 100 drifters,34,0.08332,0.08145,-0.00187,-0.00629,0.00331,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,chance of having left the box,100+ drifters,127,0.05414,0.0457,-0.00845,-0.00962,-0.00721,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,mean distance travelled within R (km),all with drifters,161,393.52931,368.2638,-25.26551,-27.36531,-21.47849,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,mean distance travelled within R (km),under 100 drifters,34,446.699,402.11041,-44.5886,-55.00156,-27.93395,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,mean distance travelled within R (km),100+ drifters,127,379.71356,359.46901,-20.24455,-21.52034,-18.09147,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,30,matched,per-cell,total variation between the two rows,all with drifters,161,0.10206,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,30,matched,per-cell,total variation between the two rows,under 100 drifters,34,0.18049,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,30,matched,per-cell,total variation between the two rows,100+ drifters,127,0.08106,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,30,all usable starts,per-cell,chance still in the start cell,all with drifters,161,0.27492,0.28358,0.00866,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,chance still in the start cell,under 100 drifters,34,0.24199,0.24475,0.00277,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,chance still in the start cell,100+ drifters,127,0.28373,0.29398,0.01024,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,chance of having left the box,all with drifters,161,0.06097,0.05322,-0.00775,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,chance of having left the box,under 100 drifters,34,0.08338,0.08129,-0.00209,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,chance of having left the box,100+ drifters,127,0.05497,0.0457,-0.00927,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,mean distance travelled within R (km),all with drifters,161,390.5893,368.11395,-22.47534,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,mean distance travelled within R (km),under 100 drifters,34,425.90143,401.74904,-24.15239,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,mean distance travelled within R (km),100+ drifters,127,381.13565,359.37413,-21.76152,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,30,all usable starts,per-cell,total variation between the two rows,all with drifters,161,0.09939,,,,,
+4 deg naive,30,all usable starts,per-cell,total variation between the two rows,under 100 drifters,34,0.1701,,,,,
+4 deg naive,30,all usable starts,per-cell,total variation between the two rows,100+ drifters,127,0.08046,,,,,
+4 deg naive,90,matched,held-out score,mean log-likelihood per test move (where both finite),all,,-2.63784,-2.5527,0.08514,0.06559,0.10697,"137,686 test moves, 331 test drifters; zero probability: chained 0.02%, direct 1.03%"
+4 deg naive,90,matched,per-cell,chance still in the start cell,all with drifters,161,0.06077,0.06825,0.00748,0.00306,0.00877,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,chance still in the start cell,under 100 drifters,34,0.0353,0.03826,0.00296,-0.00856,0.00773,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,chance still in the start cell,100+ drifters,127,0.06759,0.07628,0.00869,0.0048,0.0106,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,chance of having left the box,all with drifters,161,0.1115,0.08595,-0.02554,-0.03021,-0.01934,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,chance of having left the box,under 100 drifters,34,0.14906,0.13218,-0.01688,-0.03192,0.00289,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,chance of having left the box,100+ drifters,127,0.10144,0.07358,-0.02786,-0.03256,-0.02292,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,mean distance travelled within R (km),all with drifters,161,862.49284,845.35297,-17.13987,-29.81132,-4.70882,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,mean distance travelled within R (km),under 100 drifters,34,1043.57342,1051.10376,7.53034,-55.09302,59.91778,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,mean distance travelled within R (km),100+ drifters,127,815.44041,791.46586,-23.97455,-29.87519,-15.53371,"interval on direct - chained, 1000 drifter bootstrap replicates"
+4 deg naive,90,matched,per-cell,total variation between the two rows,all with drifters,161,0.24366,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,90,matched,per-cell,total variation between the two rows,under 100 drifters,34,0.38871,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,90,matched,per-cell,total variation between the two rows,100+ drifters,127,0.20483,,,,,no interval: total variation is biased upward by resampling noise
+4 deg naive,90,all usable starts,per-cell,chance still in the start cell,all with drifters,161,0.06211,0.06832,0.00621,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,chance still in the start cell,under 100 drifters,34,0.05612,0.03824,-0.01788,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,chance still in the start cell,100+ drifters,127,0.06371,0.07637,0.01266,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,chance of having left the box,all with drifters,161,0.12536,0.08591,-0.03945,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,chance of having left the box,under 100 drifters,34,0.15428,0.13197,-0.02231,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,chance of having left the box,100+ drifters,127,0.11762,0.07357,-0.04404,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,mean distance travelled within R (km),all with drifters,161,867.72722,844.62313,-23.10409,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,mean distance travelled within R (km),under 100 drifters,34,976.64578,1048.87262,72.22684,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,mean distance travelled within R (km),100+ drifters,127,838.56792,791.12922,-47.4387,,,no interval: shows the effect of fitting each lag on its own starts
+4 deg naive,90,all usable starts,per-cell,total variation between the two rows,all with drifters,161,0.2466,,,,,
+4 deg naive,90,all usable starts,per-cell,total variation between the two rows,under 100 drifters,34,0.38844,,,,,
+4 deg naive,90,all usable starts,per-cell,total variation between the two rows,100+ drifters,127,0.20863,,,,,
+2 deg shrinkage,30,matched,held-out score,mean log-likelihood per test move (where both finite),all,,-2.66715,-2.70734,-0.04019,-0.04789,-0.03257,"154,599 test moves, 364 test drifters; zero probability: chained 0.00%, direct 0.00%; alpha 15d=56.2, 30d=178"
+2 deg shrinkage,30,matched,per-cell,chance still in the start cell,all with drifters,596,0.10193,0.1065,0.00458,0.00058,0.00408,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,chance still in the start cell,under 100 drifters,349,0.10544,0.10825,0.00281,-0.00286,0.0024,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,chance still in the start cell,100+ drifters,247,0.09695,0.10403,0.00708,0.00374,0.00779,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,chance of having left the box,all with drifters,596,0.04832,0.04195,-0.00637,-0.00736,-0.00533,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,chance of having left the box,under 100 drifters,349,0.04024,0.03503,-0.00521,-0.00665,-0.00374,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,chance of having left the box,100+ drifters,247,0.05975,0.05174,-0.00802,-0.00912,-0.00678,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,mean distance travelled within R (km),all with drifters,596,367.7386,368.6144,0.8758,-0.05126,3.33122,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,mean distance travelled within R (km),under 100 drifters,349,382.28625,385.85043,3.56418,1.67549,7.41192,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,mean distance travelled within R (km),100+ drifters,247,347.18342,344.26066,-2.92276,-3.91927,-1.24456,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,30,matched,per-cell,total variation between the two rows,all with drifters,596,0.13111,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,30,matched,per-cell,total variation between the two rows,under 100 drifters,349,0.14793,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,30,matched,per-cell,total variation between the two rows,100+ drifters,247,0.10735,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,30,all usable starts,per-cell,chance still in the start cell,all with drifters,596,0.10228,0.10668,0.00441,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,chance still in the start cell,under 100 drifters,349,0.10608,0.10857,0.0025,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,chance still in the start cell,100+ drifters,247,0.09691,0.10401,0.0071,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,chance of having left the box,all with drifters,596,0.04895,0.04192,-0.00703,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,chance of having left the box,under 100 drifters,349,0.04114,0.03495,-0.00619,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,chance of having left the box,100+ drifters,247,0.05999,0.05177,-0.00822,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,mean distance travelled within R (km),all with drifters,596,360.20338,368.38948,8.1861,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,mean distance travelled within R (km),under 100 drifters,349,369.28275,385.46344,16.18069,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,mean distance travelled within R (km),100+ drifters,247,347.37464,344.26474,-3.1099,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,30,all usable starts,per-cell,total variation between the two rows,all with drifters,596,0.12977,,,,,
+2 deg shrinkage,30,all usable starts,per-cell,total variation between the two rows,under 100 drifters,349,0.14617,,,,,
+2 deg shrinkage,30,all usable starts,per-cell,total variation between the two rows,100+ drifters,247,0.1066,,,,,
+2 deg shrinkage,90,matched,held-out score,mean log-likelihood per test move (where both finite),all,,-3.80062,-3.90107,-0.10045,-0.1409,-0.06188,"139,120 test moves, 331 test drifters; zero probability: chained 0.00%, direct 0.00%; alpha 15d=31.6, 90d=1.78e+03"
+2 deg shrinkage,90,matched,per-cell,chance still in the start cell,all with drifters,596,0.01645,0.01915,0.0027,0.00109,0.00275,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,chance still in the start cell,under 100 drifters,349,0.01374,0.01598,0.00223,-5e-05,0.00236,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,chance still in the start cell,100+ drifters,247,0.02027,0.02363,0.00336,0.00198,0.00407,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,chance of having left the box,all with drifters,596,0.09133,0.07078,-0.02054,-0.02435,-0.0162,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,chance of having left the box,under 100 drifters,349,0.08227,0.06681,-0.01546,-0.02104,-0.00937,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,chance of having left the box,100+ drifters,247,0.10411,0.07639,-0.02772,-0.03102,-0.0239,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,mean distance travelled within R (km),all with drifters,596,808.37158,849.34964,40.97807,34.04388,48.20063,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,mean distance travelled within R (km),under 100 drifters,349,846.28504,899.31135,53.02631,41.31449,64.06473,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,mean distance travelled within R (km),100+ drifters,247,754.80154,778.75597,23.95444,18.65424,30.59914,"interval on direct - chained, 1000 drifter bootstrap replicates"
+2 deg shrinkage,90,matched,per-cell,total variation between the two rows,all with drifters,596,0.25628,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,90,matched,per-cell,total variation between the two rows,under 100 drifters,349,0.29495,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,90,matched,per-cell,total variation between the two rows,100+ drifters,247,0.20162,,,,,no interval: total variation is biased upward by resampling noise
+2 deg shrinkage,90,all usable starts,per-cell,chance still in the start cell,all with drifters,596,0.01683,0.01918,0.00235,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,chance still in the start cell,under 100 drifters,349,0.01448,0.01604,0.00156,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,chance still in the start cell,100+ drifters,247,0.02016,0.02363,0.00347,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,chance of having left the box,all with drifters,596,0.10534,0.07073,-0.03461,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,chance of having left the box,under 100 drifters,349,0.10375,0.06665,-0.03709,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,chance of having left the box,100+ drifters,247,0.1076,0.07649,-0.03111,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,mean distance travelled within R (km),all with drifters,596,810.46277,848.65792,38.19514,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,mean distance travelled within R (km),under 100 drifters,349,861.0126,898.16386,37.15126,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,mean distance travelled within R (km),100+ drifters,247,739.03812,778.70823,39.67011,,,no interval: shows the effect of fitting each lag on its own starts
+2 deg shrinkage,90,all usable starts,per-cell,total variation between the two rows,all with drifters,596,0.26221,,,,,
+2 deg shrinkage,90,all usable starts,per-cell,total variation between the two rows,under 100 drifters,349,0.30405,,,,,
+2 deg shrinkage,90,all usable starts,per-cell,total variation between the two rows,100+ drifters,247,0.20309,,,,,
+all,30,matched,re-entry,% of starts out of R at 15 days and back in R at 30,all,,,0.31006,,,,lower bound on re-entry
+all,90,matched,re-entry,% of starts out of R at 15 days and back in R at 90,all,,,0.38984,,,,lower bound on re-entry

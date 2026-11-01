@@ -143,3 +143,56 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - 47 tests pass. The figure was inspected by eye, and its first version had a caption overlapping the axis labels, which was fixed. The figure's colours passed a colour-blind check, and each line also has its own marker shape.
 - **Results:** longer steps lose starts to ended records (2.4% at 15 days, 4.9% at 30, 14.5% at 90, only 1.2 points of which is the dataset stopping), so long-lag matrices rest on longer-lived drifters. Adequate 2 deg cells drop from 41% to 31% between 15 and 90 days. 1 deg is under 3% adequate at every lag. At 5 days, 79% of 4 deg moves stay in their cell.
 - **Still to verify by the team:** the four choices above; and the environment. Everything ran in the system Python 3.14.5 on Liam's machine (Week 6 used a Python 3.11 conda environment). The committed 15-day table rebuilt identically here, but the scripts weren't rerun under 3.11.
+
+## 2026-11-01 - Week 7 Quantitative: Markov check, long-run pattern, mixing time, prior sensitivity, draft product (Claude, claude.ai)
+- **Asked (Vidisha):** implement Week 7 Quantitative from `project_plan.txt` on top of the `week7-comp` work (shared as a zip), and update this log and the plan. Partway through, Vidisha asked to set the older `week7-quant` branch aside and put Week 7 and Week 8 Quantitative on one new branch (Week 8 has its own entry below).
+- **Produced (branch `week7-8-quant`, on top of `week7-comp`):**
+  - `src/inference/markov_check.py`: P(15 d)^2 vs P(30 d) and P(15 d)^6 vs P(90 d) at 4 deg naive and 2 deg shrinkage, using the real 30- and 90-day tables, fitted on the same starts at both lags. A held-out score test with intervals from resampling test drifters, and per-cell differences (stay, exit, distance) with 1000-replicate drifter bootstrap intervals. Outputs: `markov_check_tau15d.csv`, `markov_check.png`.
+  - `src/linalg/long_run.py`: quasi-stationary distribution per unit area, lambda_1, time in the box, half-life, spectral and total-variation mixing times, for 4 deg naive, 2 deg naive and 2 deg shrinkage, with 1000-replicate bootstrap intervals. Outputs: `long_run_tau15d.csv`, `long_run_qsd.png`, `long_run_*_tau15d.npz`.
+  - `src/inference/prior_sensitivity.py`: every headline number at alpha x 0.1-10, with an even-split prior and with no prior, shaded against the product's bootstrap intervals. Outputs: `prior_sensitivity_tau15d.csv`, `prior_sensitivity.png`.
+  - `src/linalg/product.py` (the Week 7 "draft product" loader); `tests/test_quant_week7.py` (10 tests); an optional `rows` mask in `load_transitions()` and `split="even"` in `prior_rows()` (defaults unchanged); the plan's "Where we are" line and a "Week 7 status - Quantitative" block.
+- **Choices made by the AI (for the team to confirm):**
+  - the held-out score is the main Markov test. A split-half noise floor for the total variation was tried in a prototype and dropped: the chained matrix is smoother than a direct one, so the floor came out larger than the chained-vs-direct gap (0.21 vs 0.19 at 2 deg / 30 d), which would wrongly suggest no Markov gap at all;
+  - matched starts across lags (otherwise the 90-day matrix rests only on long-lived drifters);
+  - the total variation is reported without an interval, because on the first run the full-data value fell below its own bootstrap interval (resampling noise only adds to it);
+  - QSD over cells with drifters only; t_mix at total variation 0.25 from the coastal release as the headline mixing time;
+  - the 4 deg naive long-run intervals reported with and without replicates where a cell becomes a trap.
+- **Checked:**
+  - 57 tests pass (10 new). The new tests check against closed-form answers (eigenvectors, the two-cell mixing time 0.5 (1 - 2a)^n, an exact Chapman-Kolmogorov chain gives 0) and all passed on the first run.
+  - The QSD from the eigen-decomposition and from power iteration agree, checked in the script for every model. `prior_sensitivity.py` checks that alpha x 1 reproduces the saved product.
+  - The shrinkage product refits identically. `evaluation_tau15d.csv` and `effective_sample_size_tau15d.csv` are byte-identical after the code changes. `score_intervals_tau15d.csv` differs only at the 15th significant figure (numpy 2.5 here vs the team's), so the committed versions are kept.
+  - The bootstrap first gave nonsense 4 deg naive intervals (lambda_1 up to 1, centre at 12S 14E). The AI traced this to one 2-drifter cell off Angola and reported it rather than trimming it away. All three figures were inspected by eye; layout fixes were made to two of them (a floating colour bar, one off-scale point squashing a scatter).
+  - The product demo from 28S 14E is consistent with the Week 4 Figure 1 numbers.
+- **Results:**
+  - At 2 deg, P(15 d)^k predicts held-out 30- and 90-day moves better than direct fits (-0.040 and -0.100 per move, direct minus chained). It over-states exits per cell by about 0.8 points at 30 days and 2.8 at 90.
+  - The long-run pattern is centred at 30.2S, 16.4W, with half of it in 11% of the area. Expected time in the box 16 years (14-19); the coastal start is forgotten after 2.7 years (2.4-2.9).
+  - The long run doesn't depend on the prior, but the coastal numbers do at alpha x 10 or x 0.1.
+- **Environment:** run in Python 3.13 with numpy 2.5 and scipy 1.18 (`long_run.py` needs scipy, now added to `environment.yml`; clouddrift already installs it). Not rerun in the team's conda environment.
+- **Still to verify by the team:** the choices above; the "garbage patch" comparison needs a citation before it goes in the report.
+
+## 2026-11-01 - Week 8 Quantitative: robustness and region swap (Claude, claude.ai)
+- **Asked (Vidisha):** set the older `week7-quant` branch aside and do Week 7 and Week 8 Quantitative together on one branch from the `week7-comp` zip.
+- **Produced (branch `week7-8-quant`):**
+  - `src/inference/robustness.py`: 13 settings (grid 1/2/4 deg; lags 5-90 days; undrogued only and drogued only; 2010+), each changing one thing and refitted as the product. Headline numbers with 200-replicate drifter bootstrap intervals (50 at 1 deg). Outputs: `robustness_tau15d.csv`, `robustness.png`.
+  - `src/inference/region_swap.py`: a second box (Brazil-Malvinas Confluence) built exactly from the existing tables, with every quant step run on it unchanged. Outputs: `region_swap_tau15d.csv`, `region_swap.png`.
+  - `tests/test_quant_week8.py` (4 tests); a "Week 8 status - Quantitative" block in the plan; branch wording in "Where we are".
+- **Choices made by the AI (for the team to confirm):**
+  - the settings list;
+  - fewer bootstrap replicates (200; 50 at 1 deg) to keep the run to about 8 minutes;
+  - shrinkage at 1 deg towards 2 deg (one level up, as 2 towards 4);
+  - drogue status taken at the start of each move;
+  - a region swap inside our extract instead of a new extract (which needs Computational and the cloud store);
+  - for naive P, intervals over the replicates without a trap.
+- **Checked:**
+  - The base setting reproduces the product's alpha and the Week 6 and 7 numbers exactly.
+  - The surprising 1.2% adequacy for 2 deg 2010+ was confirmed by an independent count (plain floor arithmetic, median 52 drifters per cell).
+  - The new tests caught a wrong claim in the AI's own docstring: the 4 deg settings change one thing from the 4 deg baseline, not from the product. Both the docstring and the test were fixed.
+  - A first region-swap check reported FAIL because it expected no zeros in the absorbing "left the box" row (which is [0, ..., 0, 1] by design). The check was wrong, not the pipeline, and was narrowed to cell rows.
+  - A first draft of the plan's Week 8 summary had two claims that didn't match the CSV (the largest pattern difference, and which 2010+ numbers fall outside the interval). Both were corrected against the CSV.
+  - The figures were inspected by eye. 61 tests pass.
+- **Results:**
+  - The long-run pattern is the same in every setting (centre 29-30S, 16-21W).
+  - Drogue status changes the coastal release most: undrogued material is about 10 deg further west after a year and 7-8 times as likely to have left the box. This answers RQ3, but drogued-only is thin.
+  - Time in the box rises with the lag (10 to 26 years). 1 deg rests on its prior (2% of cells adequate), and so does a 2 deg 2010+ matrix (1%).
+  - The code ran unchanged on the second box.
+- **Still to verify by the team:** the choices above; whether the report frames the product as pooled "floating material and water" with the undrogued run as the floating-material case; the 1:10m coastline for 1 deg.

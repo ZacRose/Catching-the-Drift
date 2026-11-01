@@ -1,0 +1,60 @@
+model,quantity,estimate,ci_low,ci_high,unit,cells_kept,n_boot
+2 deg shrinkage,lambda_1,0.997472,0.997109,0.997841,per 15-day step,596,1000
+2 deg shrinkage,pct_lost_per_step,0.252831,0.215919,0.28905,%,596,1000
+2 deg shrinkage,pct_lost_per_step_to_exit,0.249756,0.212889,0.285774,%,596,1000
+2 deg shrinkage,pct_lost_per_step_to_cells_without_drifters,0.003075,0.000876,0.006483,%,596,1000
+2 deg shrinkage,years_in_box_expected,16.243173,14.207839,19.020004,years,596,1000
+2 deg shrinkage,years_half_life,11.24467,9.833884,13.169424,years,596,1000
+2 deg shrinkage,lambda_2_modulus,0.961918,0.958906,0.984911,per 15-day step,596,1000
+2 deg shrinkage,years_mixing_efold,1.131511,1.037562,3.264325,years,596,1000
+2 deg shrinkage,years_tmix_from_coast,2.710472,2.422998,2.915811,years,596,1000
+2 deg shrinkage,qsd_centre_lat,-30.20133,-30.319113,-30.093154,deg,596,1000
+2 deg shrinkage,qsd_centre_lon,-16.357724,-17.246573,-15.494768,deg,596,1000
+2 deg shrinkage,pct_area_holding_half,11.138515,10.031686,12.128114,%,596,1000
+2 deg shrinkage,years_tmix_median_start,2.176591,,,years,596,0
+2 deg shrinkage,years_tmix_worst_start,4.394251,,,years,596,0
+2 deg shrinkage,starts_not_mixed,0,,,cells,596,0
+2 deg shrinkage,pct_replicates_with_trap,0.0,,,%,596,1000
+4 deg naive,lambda_1,0.995531,0.995014,1.0,per 15-day step,161,1000
+4 deg naive,pct_lost_per_step,0.446881,0.0,0.498587,%,161,1000
+4 deg naive,pct_lost_per_step_to_exit,0.442557,0.0,0.493375,%,161,1000
+4 deg naive,pct_lost_per_step_to_cells_without_drifters,0.004324,0.0,0.008665,%,161,1000
+4 deg naive,years_in_box_expected,9.189861,8.236836,82457760486.34073,years,161,1000
+4 deg naive,years_half_life,6.355683,5.695095,57155364196.38011,years,161,1000
+4 deg naive,lambda_2_modulus,0.953624,0.951105,0.995906,per 15-day step,161,1000
+4 deg naive,years_mixing_efold,0.954904,0.89586,10.010854,years,161,1000
+4 deg naive,years_tmix_from_coast,1.560575,1.478439,1.64271,years,161,1000
+4 deg naive,qsd_centre_lat,-29.993057,-30.11968,-12.0,deg,161,1000
+4 deg naive,qsd_centre_lon,-18.120307,-18.932634,14.0,deg,161,1000
+4 deg naive,pct_area_holding_half,14.293453,0.709929,14.9849,%,161,1000
+4 deg naive,years_tmix_median_start,1.765914,,,years,161,0
+4 deg naive,years_tmix_worst_start,nan,,,years,161,0
+4 deg naive,starts_not_mixed,1,,,cells,161,0
+4 deg naive (replicates without a trap),lambda_1,0.995531,0.994993,0.996077,per 15-day step,161,794
+4 deg naive (replicates without a trap),pct_lost_per_step,0.446881,0.39232,0.500678,%,161,794
+4 deg naive (replicates without a trap),pct_lost_per_step_to_exit,0.442557,0.388212,0.494521,%,161,794
+4 deg naive (replicates without a trap),pct_lost_per_step_to_cells_without_drifters,0.004324,0.001036,0.008738,%,161,794
+4 deg naive (replicates without a trap),years_in_box_expected,9.189861,8.202441,10.467935,years,161,794
+4 deg naive (replicates without a trap),years_half_life,6.355683,5.671254,7.241577,years,161,794
+4 deg naive (replicates without a trap),lambda_2_modulus,0.953624,0.950976,0.971772,per 15-day step,161,794
+4 deg naive (replicates without a trap),years_mixing_efold,0.954904,0.891274,1.703227,years,161,794
+4 deg naive (replicates without a trap),years_tmix_from_coast,1.560575,1.478439,1.64271,years,161,794
+4 deg naive (replicates without a trap),qsd_centre_lat,-29.993057,-30.126374,-29.874309,deg,161,794
+4 deg naive (replicates without a trap),qsd_centre_lon,-18.120307,-18.969809,-17.255004,deg,161,794
+4 deg naive (replicates without a trap),pct_area_holding_half,14.293453,13.039589,15.010152,%,161,794
+4 deg naive,pct_replicates_with_trap,20.6,,,%,161,1000
+2 deg naive,lambda_1,0.997583,,,per 15-day step,596,0
+2 deg naive,pct_lost_per_step,0.241742,,,%,596,0
+2 deg naive,pct_lost_per_step_to_exit,0.237527,,,%,596,0
+2 deg naive,pct_lost_per_step_to_cells_without_drifters,0.004215,,,%,596,0
+2 deg naive,years_in_box_expected,16.988284,,,years,596,0
+2 deg naive,years_half_life,11.761143,,,years,596,0
+2 deg naive,lambda_2_modulus,0.96301,,,per 15-day step,596,0
+2 deg naive,years_mixing_efold,1.164342,,,years,596,0
+2 deg naive,years_tmix_from_coast,3.12115,,,years,596,0
+2 deg naive,qsd_centre_lat,-30.206963,,,deg,596,0
+2 deg naive,qsd_centre_lon,-16.244606,,,deg,596,0
+2 deg naive,pct_area_holding_half,11.138515,,,%,596,0
+2 deg naive,years_tmix_median_start,2.217659,,,years,596,0
+2 deg naive,years_tmix_worst_start,nan,,,years,596,0
+2 deg naive,starts_not_mixed,3,,,cells,596,0
