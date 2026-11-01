@@ -1,0 +1,12 @@
+check,lag_days,rows_checked,mismatches
+rebuilt table matches the committed one (columns that differ),15,803368,0
+5 days then 5 days equals 10 days,10,785499,0
+15 days then 15 days equals 30 days,30,765123,0
+30 days then 30 days equals 60 days,60,739662,0
+30 days then 60 days equals 90 days,90,739662,0
+"brute-force lookup, up to 25 rows per outcome",5,100,0
+"brute-force lookup, up to 25 rows per outcome",10,100,0
+"brute-force lookup, up to 25 rows per outcome",15,100,0
+"brute-force lookup, up to 25 rows per outcome",30,100,0
+"brute-force lookup, up to 25 rows per outcome",60,100,0
+"brute-force lookup, up to 25 rows per outcome",90,100,0
