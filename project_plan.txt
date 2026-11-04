@@ -24,7 +24,7 @@ Where we are (2026-11-01, Week 8):
 - Week 7 Computational: done (see "Week 7 status - Computational" in section 5). The transition
   table now exists at 5, 10, 15, 30, 60 and 90 days, checked three ways, with a summary of what
   changes with the time step. On branch week7-comp, not yet committed or reviewed.
-- Week 6 and 7 Business (RQ4 seasonal forecast): nothing in the repo yet.
+- Week 6, 7, and 8 Business (RQ4 seasonal forecast): DONE. 
 - The team should check the choices flagged in the Week 6, 7 and 8 status blocks.
 - Poster fixes: no poster feedback has come back yet, so this part of Week 6 is still waiting.
 
@@ -870,6 +870,36 @@ For the team to confirm (the AI's choices; see the 2026-11-01 Week 8 AI log entr
   (2) 200 replicates (50 at 1 deg) instead of 1000;
   (3) drogue status at the start of each move (no end-of-move status, issue e);
   (4) the test box for the region swap.
+
+Week 6-8 status - Business DONE (2026-11-04; in the pull request, not yet reviewed)
+Run: python3 -m src.forecasting.seasonal_forecast (1-2 minutes; --n-boot 200 for a quick look)
+Reads data/processed/transitions_tau15d.npz, so no other code changes. Tests: tests/test_business_week7.py (7).
+Outputs: outputs/results/seasonal_*.csv, outputs/figures/seasonal_*.png.
+
+What it does (4 deg grid, seasons DJF/MAM/JJA/SON, December counts in the next year's DJF):
+A. Seasonal signal, with drifter-bootstrap intervals.
+B. Rolling-origin forecasts from 2008, each using only earlier years, against an annual-mean
+   benchmark that ignores season. Season-years with fewer than 15 distinct drifters are skipped.
+C. The same rolling origin for the whole 4 deg matrix, scored by log-likelihood of the observed moves.
+D. Release from the Benguela coastal cells at the start of each season, 3 months and 1 year.
+
+Results:
+- Seasonal signal is clear in the coastal box: offshore (westward) distance per 15 days is lowest
+  in JJA (69 km vs 122 km in DJF and 123 km in SON); northward distance is highest in SON (82 km).
+- Forecasting is weaker: the seasonal mean beats the annual mean for offshore distance by
+  17.5%, but the interval includes zero; no real gain for northward distance.
+- Exit rate falls over the years more than it changes by season, so recency weighting is the
+  only method that clearly beats the benchmark (28%).
+- Whole-matrix forecast: negative result. Seasonal matrices do not beat the annual matrix at any
+  alpha tried (each season holds about a quarter of the data). To be reported as such.
+- Release: all-season 3-month numbers match coastal_release_tau15d.csv (0.37% left R, 2.96% in
+  the coastal zone). Only DJF release clearly differs (about 0.9% reach the coastal zone).
+
+For the team to confirm:
+1. FIRST_TEST_YEAR = 2008 and MIN_DRIFTERS = 15 are the AI's choices (data is thin before 2003).
+2. The scoping-note idea "share leaving northward within tau" is not usable: no coastal start leaves R in 15 days.
+3. Because seasonal forecasts are not reliably better than the benchmark, the report should say seasonal
+   differences are real but forecasting them is uncertain, not that a validated risk window exists.
 
 Week 9 - Report draft
 - Whole team: first full draft (background, methods, findings, recommendations), including an
