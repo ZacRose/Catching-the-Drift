@@ -31,8 +31,7 @@ Links can be shared: the address bar keeps the view, e.g. `index.html#start=cell
    With anything but all drifters, all year, a hollow diamond and fainter dots keep that answer on the map to compare with.
 
 Turn on **Loop** to keep replaying it, or drag the timeline to any day. The ⓘ button at the top
-explains the map, the groundings, the data flags, where the numbers come from and how far to trust them.
-The **Seasons** tab shows how the drift changes through the year (see below).
+explains the map, the seasons, the groundings, the data flags, where the numbers come from and how far to trust them.
 
 On the map:
 - Colour bands show the chance of being in each 2° square, drawn as smooth contours through the
@@ -81,13 +80,11 @@ row also gives the chance of having reached it by then: material passes through,
 
 Rerun the exporter whenever the product changes (e.g. a new alpha or bootstrap).
 
-## The Seasons view
+## What the seasons show
 
-The **Seasons** tab shows how westward drift from the Benguela zone changes through the year, with its 95%
-range, and how that differs for drifters with and without their drogue. It's a pattern, not a forecast: the
-data stop in October 2022, and the best method is simply the average of past years' same season. It
-comes from `python3 -m src.forecasting.seasonal_robustness`, which saves
-`data/processed/seasonal_forecast_app.json`; rerun the exporter to update the page. The format is in the docstring
-of `src/app/export_app_data.py`. The button under the chart runs a year on the map from a chosen season. The map's
-seasons show smaller gaps than this chart, because a whole matrix needs far more data than one average (decisions 16 and
-20 in `project_plan.txt`).
+The ⓘ panel quotes the plain seasonal averages: how westward drift from the Benguela zone changes through the year,
+and how that differs for drifters with and without their drogue. It's a pattern, not a forecast: the data stop in
+October 2022, and the best method is simply the average of past years' same season. It comes from
+`python3 -m src.forecasting.seasonal_robustness`, which saves `data/processed/seasonal_pattern_app.json`; rerun the
+exporter to update the page. The map's seasons show smaller gaps than these averages, because a whole matrix needs far
+more data than one average (decisions 16 and 20 in `project_plan.txt`).

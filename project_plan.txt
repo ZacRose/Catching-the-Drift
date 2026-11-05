@@ -962,7 +962,7 @@ estimates did not change.
 
 Week 9 status - App (2026-11-02, revised twice the same day after team feedback; on main since pull
 request #15; Seasons view and trust notes added 2026-11-05, see section 8; renamed the South Atlantic
-Gyre Drift Explorer, with drifter and season switches, 2026-11-05, see section 9)
+Gyre Drift Explorer, with drifter and season switches and without the Seasons view, 2026-11-05, see section 9)
 An interactive front end for the product: app/index.html (open by double-clicking; any browser, no
 Python, server or internet). Data: python3 -m src.app.export_app_data (about 25 minutes, after
 src.inference.shrinkage_fit, drogue_comparison and seasonal_matrices), then python3 -m src.app.check_intervals
@@ -976,8 +976,8 @@ all-year view; section 9 has what changed.
    the map: distance travelled, left the box, in the Benguela zone, near the Benguela coast, each
    with a 95% interval and a small chart over time. A Loop switch replays the drift, an (i) button
    explains everything once, and each start shows a data flag (100+ / 10-99 / under 10 drifters)
-   with its key. A "Seasons" tab shows the seasonal pattern from RQ4, not a forecast (decision 16):
-   src.forecasting.seasonal_robustness saves data/processed/seasonal_forecast_app.json and the exporter
+   with its key. That panel also quotes the seasonal pattern from RQ4, not a forecast (decision 16):
+   src.forecasting.seasonal_robustness saves data/processed/seasonal_pattern_app.json and the exporter
    puts it in the page.
 2. Groundings (new, a switch on the map): the product leaves out starts whose record ended (decision
    10), so material only drifts or leaves the box. With the switch on, the app uses a second model in
@@ -1190,7 +1190,7 @@ in logs/ai_use_log.md).
    11,493 of 11,654 exits (the rest hit a gap first). The edge nearest the start cell is only right 88% of the
    time, so it is the fallback only for cells with no observed exit. Observed: south 45%, north 28%, east 27%, west 0%.
 
-16. No forecast in the app; a Seasons view, and a season switch at Zac's request (2026-11-05, revised the same day).
+16. No forecast and no Seasons view in the app; a season switch at Zac's request (2026-11-05, revised twice the same day).
    There is no forecast to show: the data stop in October 2022 and the best method is the average of past years'
    same season, so "next season" would be the same number every year. The AI first advised against a season switch
    on the map: at 2 deg the best seasonal matrix (alpha near 2000) gives a season's own data about 12% of the weight
@@ -1200,9 +1200,12 @@ in logs/ai_use_log.md).
    The evidence above still stands, and the page says so: a small gain (+0.4% per move, +0.6% for undrogued), and
    the coast's centre moves at most 0.41 deg after a year and 0.19 deg after 3 months. Corrected: this decision
    first said the 3-month centre moves "about 1 deg". That was the 4 deg release at alpha 20, not the matrix the map
-   would use. The Seasons view shows the westward pattern by season and drifter type, which is the stronger
-   evidence for seasons. (The first 2 deg figures were a one-off check: see the AI log. seasonal_matrices.py now
-   does the sum properly.)
+   would use. A Seasons view first showed the westward pattern by season and drifter type, which is the stronger
+   evidence for seasons. Zac questioned it and it was removed, along with the tabs: it ignored the start, timeframe and
+   switches and blanked the map, and once the map had a season switch it was a second, disconnected answer to the
+   same question. The pattern is now quoted in the "How to read this" panel, and the full results stay in
+   outputs/results for the report. (The first 2 deg figures were a one-off check: see the AI log.
+   seasonal_matrices.py now does the sum properly.)
 
 17. The drifter bootstrap stays the main interval, and the whole-year ratio is reported beside it. Resampling
    29 years, nine of them thin, is too rough to replace it, but it shows what the intervals leave out (section 8).
@@ -1227,7 +1230,7 @@ in logs/ai_use_log.md).
    (0.0025 to 0.0058; all drifters) and +0.0057 (0.0037 to 0.0078; undrogued) on test drifters in other years. The price is
    that most of the real difference is shrunk away: the summer-winter gap in westward drift from the Benguela zone goes
    from 51 to 18 km per 15 days (34% kept), and 83 to 18 km for undrogued (21% kept). That's why the page says "differences
-   here are understated", and why the Seasons view keeps the plain averages.
+   here are understated", and why the "How to read this" panel quotes the plain averages.
    Tried and dropped (one-off, see the AI log): a prior carrying a 4 deg seasonal shift. It gains 0.0045 against 0.0041
    (undrogued 0.0062 against 0.0057), and keeps 35% against 34% (33% against 21%). Not worth a second setting, and it says
    something useful: beyond the mean drift, seasonal detail mostly doesn't recur from year to year. The grounding chance
@@ -1438,16 +1441,20 @@ a timeframe crosses seasons, and make it more rigorous and helpful without clutt
    - product.py: load_product(drifters="undrogued") and forecast(..., season="DJF").
    Left out to avoid clutter: the exit-edge breakdown, a separate prior-range display (the reports should still quote it, decision
    19), more result rows, and map overlays beyond the one comparison marker.
+   Removed (Zac, decision 16): the Drift explorer and Seasons tabs. The page is now one view, with the information button
+   beside the title, and an old link to the Seasons view opens the map.
 
 5. Checks.
    - tests/test_drogue_season_week9.py, 22 tests with hand-worked answers: paired draws, seasonal counts and matrices,
      leave-one-year-out with a leak test that also checks it can fail, step seasons by date, first passage forward and
-     backward, 16-bit round trip. 138 tests in the repo, all passing, including the page against Python for both sets, both
+     backward, 16-bit round trip. 139 tests in the repo, all passing, including the page against Python for both sets, both
      models and the seasons in headless Chrome.
    - The all-drifter matrix and its coast release still match the saved results (largest difference 4.8e-5, the CSV's rounding),
      and undrogued matches drogue_comparison's (5e-5). Rerunning drogue_comparison gave an identical CSV and matrix, and
      interval_coverage --drifters all gave the same table after being restructured. Only three existing outputs changed:
-     the app's data, its interval check and the Seasons text (seasonal_forecast_app.json).
+     the app's data, its interval check and the seasonal text (seasonal_forecast_app.json, now the shorter
+     seasonal_pattern_app.json). Removing the tabs changed nothing else in the data file: compared block by block with the
+     file before, P, the seasons and every interval are identical, so the interval check wasn't rerun for it.
    - check_intervals.py recomputed 2,816 seasonal intervals and 704 all-year ones the slow way, on the same draws, for both sets
      and models: at most 1.8e-4 on seasonal steps that are stored, which is the 16-bit rounding, and up to 6.6e-4 all year. The
      larger all-year figure is a value under 1e-6% stored as "too small" (traced in the all-drifter water model: 5.8e-7%, and
@@ -1455,7 +1462,7 @@ a timeframe crosses seasons, and make it more rigorous and helpful without clutt
    - One-off: over every start, season, set, model, quantity and stored step (about 1.2 million ranges) the page's number is
      outside its seasonal range 8 times, allowing for rounding, and never for a whole-coast release.
    - One-off: every control clicked through on the real data in headless Chrome, with no errors: 10 distinct answers from 10
-     drifter and season combinations, with groundings, layers, the timeline and the Seasons button; toggling to undrogued
+     drifter and season combinations, with groundings, layers, the timeline and the information panel; toggling to undrogued
      at the 3 cells with none (the answer falls back on the 4 deg area, with no range and a note). Screenshots at desktop and 390 px.
    - Times (minutes, 2026-11-05): drogue_comparison 5.6, seasonal_matrices 3.3, interval_coverage undrogued 7.3 (and all 5.7),
      export_app_data 25.5, check_intervals 39.8. The full run is now about 1 hour 50 minutes: section 8's 35, less the old

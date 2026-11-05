@@ -142,6 +142,14 @@ def test_float32_round_trip():
     assert np.allclose(back, a.ravel(), rtol=1e-6)
 
 
+def test_page_is_one_view_with_its_info_button():
+    with open(os.path.join(REPO_ROOT, "app", "index.html")) as f:
+        page = f.read()
+    assert 'id="infoBtn"' in page and 'id="infoDialog"' in page
+    assert 'role="tablist"' not in page and "data-view" not in page
+
+
+
 @pytest.mark.skipif(CHROME is None or not os.path.exists(APP_DATA_PATH),
                     reason="needs Google Chrome and app/data/app_data.js (python3 -m src.app.export_app_data)")
 def test_page_maths_matches_python():

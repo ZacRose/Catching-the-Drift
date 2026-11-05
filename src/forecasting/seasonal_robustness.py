@@ -21,11 +21,11 @@ seasonal_forecast.py changes, and its outputs aren't touched.
    drifter type, RMSE instead of MAE, and shuffled season labels.
 3. The release (Part D) by drifter type: does DJF still leave less in the coastal zone?
 
-It also writes data/processed/seasonal_forecast_app.json, which src/app/export_app_data.py puts in the app's
-Seasons view. The app shows the seasonal pattern, not a forecast: there is no forecast to show (the data
-stop in October 2022, and the best method is the average of past years' same season).
+It also writes data/processed/seasonal_pattern_app.json, which src/app/export_app_data.py puts in the app's
+"How to read this" panel. The app quotes the seasonal pattern, not a forecast: there is no forecast to show (the
+data stop in October 2022, and the best method is the average of past years' same season).
 
-Outputs: outputs/results/seasonal_robustness.csv and data/processed/seasonal_forecast_app.json.
+Outputs: outputs/results/seasonal_robustness.csv and data/processed/seasonal_pattern_app.json.
 Run: python3 -m src.forecasting.seasonal_robustness   (about 2 minutes; after src.forecasting.seasonal_forecast)
 """
 import csv
@@ -42,8 +42,7 @@ N_SHUFFLE = 5000
 N_SHUFFLE_FORECAST = 2000
 N_BOOT_RELEASE = 300
 SECONDS_PER_MOVE = 15 * 86400.0
-APP_JSON_PATH = os.path.join(PROCESSED_DIR, "seasonal_forecast_app.json")
-SEASON_NAMES = ("Summer", "Autumn", "Winter", "Spring")  # DJF, MAM, JJA, SON (southern hemisphere)
+APP_JSON_PATH = os.path.join(PROCESSED_DIR, "seasonal_pattern_app.json")
 DJF, MAM, JJA, SON = 0, 1, 2, 3
 
 
@@ -160,30 +159,18 @@ def shuffled_skill(series, moves, n, rng):
 
 
 def app_block(signal_all, signal_undrogued, signal_drogued, forecast):
-    """The app's Seasons view (the format in src/app/export_app_data.py's docstring)."""
-    x = [f"{name} ({code})" for name, code in zip(SEASON_NAMES, sf.SEASONS)]
-    line = lambda r: [r[c] for c in sf.SEASONS]
+    """What the app's "How to read this" panel says the drifters themselves show through the year."""
     high = round(0.5 * (signal_all["DJF"] + signal_all["SON"]), -1)
     low = round(signal_all["JJA"], -1)
     return {
-        "title": "Does the drift change with the seasons?",
-        "summary": (f"Yes, in one clear way. Material starting in the Benguela zone drifts further west in summer and spring (about {high:.0f} km per 15 days) "
-                    f"than in winter (about {low:.0f} km). Summer beat winter in {signal_all['years_djf_higher']} of the {signal_all['years_djf_compared']} years with enough "
+        "summary": (f"Material starting in the Benguela zone drifts further west in summer and spring (about {high:.0f} km per 15 days) "
+                    f"than in winter (about {low:.0f} km), and summer beat winter in {signal_all['years_djf_higher']} of the {signal_all['years_djf_compared']} years with enough "
                     "drifters to compare."),
-        "quantity": "Westward distance per 15 days from the Benguela zone, outlined on the map",
-        "unit": "km",
-        "series": [
-            {"label": "All drifters (shaded: 95% range, resampling whole years)", "x": x, "y": line(signal_all),
-             "low": [signal_all[f"{c}_low"] for c in sf.SEASONS], "high": [signal_all[f"{c}_high"] for c in sf.SEASONS], "kind": "observed"},
-            {"label": "Lost their drogue (also pushed by the wind)", "x": x, "y": line(signal_undrogued), "kind": "observed"},
-            {"label": "Drogue attached (follow the water)", "x": x, "y": line(signal_drogued), "kind": "observed", "dashed": True},
-        ],
         "notes": [
             f"The pattern is mainly in drifters that have lost their drogue, which the wind pushes directly: {signal_undrogued['djf_minus_jja']:+.0f} km between summer and winter, "
             f"against {signal_drogued['djf_minus_jja']:+.0f} km for drifters that follow the water, whose range ({signal_drogued['djf_jja_low']:+.0f} to {signal_drogued['djf_jja_high']:+.0f} km) includes no difference.",
             f"This is a typical pattern, not a forecast for a particular date. Knowing the season cuts the typical error in a season's westward drift from {forecast['mae_annual_km']:.0f} km to "
             f"{forecast['mae_seasonal_km']:.0f} km, so one year can still differ a lot from the average.",
-            "On the drift map you can release in any season, and the drift then changes as the seasons pass. Whole matrices need more data than one average, so the map's seasons are pulled towards the all-year drift, and show smaller gaps than this chart.",
         ],
     }
 

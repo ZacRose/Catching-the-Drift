@@ -103,7 +103,6 @@
   const startKey = (s) => (s.kind === "coast" ? "coast" : `cell:${s.cell}`);
 
   const state = {
-    view: "explore",
     start: coastStart(),
     steps: 6,
     drifters: "all",
@@ -326,8 +325,8 @@
     return blend;
   }
   function drawHeat() {
-    const c = ctx.heat, g = M.region, explore = state.view === "explore", cover = explore && state.layers.coverage;
-    const dist = !explore || cover ? null : currentDist();
+    const c = ctx.heat, g = M.region, cover = state.layers.coverage;
+    const dist = cover ? null : currentDist();
     c.clearRect(0, 0, map.w, map.h);
     if (cover || dist) {
       const binOf = cover ? (v) => { const f = flagOf(10 ** v + 1e-9); return f && f.rgba; }
@@ -421,7 +420,6 @@
       c.restore();
     }
 
-    if (state.view !== "explore") return; // the Seasons view shows only the zone its chart is about
     const show = R && !state.layers.coverage && state.t > 0;
     // where it has run aground: the coastline coloured by the chance, stretch by stretch
     if (show && state.layers.ground) {
@@ -637,7 +635,7 @@
   function syncResults(force) {
     const el = $("#results");
     const step = R ? (state.playing ? R.steps : clamp(Math.round(state.t), 0, R.steps)) : 0;
-    const visible = !!R && state.view === "explore" && step > 0 && (R.finished || !state.playing);
+    const visible = !!R && step > 0 && (R.finished || !state.playing);
     if (!visible) {
       if (!el.hidden) { el.classList.remove("show"); el.hidden = true; state.highlight = null; }
       shownStep = -1;
@@ -773,81 +771,6 @@
     if (go) run();
   }
 
-  function setView(v) {
-    state.view = v;
-    $$(".mode").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === v));
-    moveGlider();
-    const fc = v === "forecast";
-    $("#explorer").hidden = fc;
-    $("#forecastPanel").hidden = !fc;
-    $("#mapVeil").hidden = !fc || !!D.forecast;
-    $("#timeline").style.visibility = fc ? "hidden" : "";
-    $("#loopBtn").style.visibility = fc ? "hidden" : "";
-    $("#legend").style.visibility = fc ? "hidden" : "";
-    $("#mapHint").hidden = fc;
-    $(".map-toggles").hidden = fc;
-    if (fc) tip.classList.remove("show");
-    state.highlight = null;
-    if (fc) renderForecast();
-    syncResults(); writeHash(); dirty = true;
-    if (fc && D.forecast) state.highlight = "benguela"; // the area the Seasons chart is about
-  }
-  let gliderPlaced = false;
-  function moveGlider() {
-    const on = $(`.mode[data-view="${state.view}"]`), g = $(".mode-glider");
-    if (!gliderPlaced) g.style.transition = "none"; // on load it starts in place, rather than sliding in from the corner
-    g.style.left = `${on.offsetLeft}px`; g.style.width = `${on.offsetWidth}px`;
-    if (!gliderPlaced) { void g.offsetWidth; g.style.transition = ""; gliderPlaced = true; }
-  }
-
-  // ---------- forecast view ----------
-  function renderForecast() {
-    const el = $("#forecastPanel"), F = D.forecast;
-    if (!F) {
-      el.innerHTML = `<span class="badge soon">In progress</span>
-        <h2>Seasons</h2>
-        <p>Does the drift change predictably with the seasons? This view will show the team's seasonal forecast: one year's seasonal pattern forecast from earlier years only, then checked against what actually happened.</p>
-        <ol>
-          <li><b>Pick a season</b> and see how the drift from the Benguela differs from the all-year picture.</li>
-          <li><b>See the forecast</b> for the next season with its uncertainty, next to what was observed.</li>
-          <li><b>Compare</b> with the drift explorer, which pools all seasons from ${D.meta.years[0]}–${D.meta.years[1]}.</li>
-        </ol>
-        <div class="team-note">For the team: save <code>data/processed/seasonal_forecast_app.json</code> in the format described in
-        <code>src/app/export_app_data.py</code> and rerun <code>python3 -m src.app.export_app_data</code>. This panel then draws it.</div>`;
-      return;
-    }
-    const W = 360, H = 190, l = 42, r = 34, t = 14, b = 30;
-    const roundUp = (v) => { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; };
-    const series = F.series || [];
-    const xs = [...new Set(series.flatMap((s) => s.x))];
-    const vals = series.flatMap((s) => [...s.y, ...(s.high || []), ...(s.low || [])]).filter(isFinite);
-    const top = roundUp(Math.max(...vals) * 1.02), bot = Math.min(0, ...vals);
-    const X1 = (v) => l + ((W - l - r) * xs.indexOf(v)) / Math.max(xs.length - 1, 1);
-    const Y1 = (v) => t + (H - t - b) * (1 - (v - bot) / (top - bot));
-    const colours = ["#38bdf8", "#fbbf24", "#2dd4bf", "#fb7185"];
-    let g = "";
-    for (let i = 0; i <= 4; i++) { const v = bot + ((top - bot) * i) / 4; g += `<line x1="${l}" x2="${W - r}" y1="${Y1(v)}" y2="${Y1(v)}"/><text x="${l - 6}" y="${Y1(v) + 3}" text-anchor="end">${+v.toPrecision(3)}</text>`; }
-    const every = Math.ceil(xs.length / 6);
-    const xl = xs.map((v, i) => (i % every ? "" : `<text x="${X1(v)}" y="${H - 10}" text-anchor="middle">${v}</text>`)).join("");
-    const paths = series.map((s, i) => {
-      const c = colours[i % colours.length];
-      const ln = s.x.map((v, k) => `${k ? "L" : "M"}${X1(v)},${Y1(s.y[k])}`).join("");
-      const band = s.low && s.high ? `<path class="band" fill="${c}" d="${s.x.map((v, k) => `${k ? "L" : "M"}${X1(v)},${Y1(s.high[k])}`).join("")}${s.x.map((v, k) => [X1(v), Y1(s.low[k])]).reverse().map(([a, bb]) => `L${a},${bb}`).join("")}Z"/>` : "";
-      return `${band}<path class="line" stroke="${c}" d="${ln}" ${s.kind === "forecast" || s.dashed ? 'stroke-dasharray="6 4"' : ""}/>`;
-    }).join("");
-    el.innerHTML = `<span class="badge ready">Seasonal pattern</span><h2>${F.title || "Seasons"}</h2><p>${F.summary || ""}</p>
-      <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${F.quantity || "Forecast"}">${g}${xl}${paths}</svg></div>
-      <div class="keys">${series.map((s, i) => `<span>${keyLine(s.kind === "forecast" || s.dashed, colours[i % colours.length], 2.4)}${s.label}</span>`).join("")}</div>
-      ${F.quantity ? `<p class="fine">${F.quantity}${F.unit ? ` (${F.unit})` : ""}</p>` : ""}
-      ${(F.notes || []).length ? `<ul class="fine">${F.notes.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}
-      <button type="button" class="ghost-btn" id="trySeason">Step through the seasons on the map</button>`;
-    $("#trySeason").onclick = () => { // a year from the chosen season, so it runs through all four
-      setView("explore");
-      setCondition("season", state.season === null ? 0 : state.season);
-      setSteps(24, true);
-    };
-  }
-
   // ---------- map interaction ----------
   const tip = $("#tooltip");
   const shoreIndex = new Map(D.shore.cells.map((c, k) => [c, k]));
@@ -857,7 +780,6 @@
     return { cell: M.cellOf(latAt(y), lonAt(x)), x, y };
   }
   canvases.fx.addEventListener("pointermove", (e) => {
-    if (state.view !== "explore") return;
     const { cell, x, y } = cellAtEvent(e);
     if (cell !== state.hover) { state.hover = cell; dirty = true; }
     wrap.classList.toggle("no-start", cell >= 0 && M.drifters[cell] === 0);
@@ -883,7 +805,7 @@
       : "No drifter ever started a move in that square (land or never sampled). Try a nearby ocean square.");
     setStart(cellStart(cell));
   }
-  canvases.fx.addEventListener("click", (e) => { if (state.view === "explore") tryStart(cellAtEvent(e).cell); });
+  canvases.fx.addEventListener("click", (e) => tryStart(cellAtEvent(e).cell));
 
   // ---------- typed positions ----------
   function parseCoord(text, axis) {
@@ -918,13 +840,12 @@
 
   // ---------- shareable links: #start=cell:103&days=90&ground=1&drifters=undrogued&season=DJF ----------
   function writeHash() {
-    const h = state.view === "forecast" ? "view=forecast"
-      : `start=${startKey(state.start)}&days=${state.steps * TAU}${state.layers.ground ? "&ground=1" : ""}${state.drifters === "all" ? "" : `&drifters=${state.drifters}`}${state.season === null ? "" : `&season=${D.seasons.codes[state.season]}`}`;
+    const h = `start=${startKey(state.start)}&days=${state.steps * TAU}${state.layers.ground ? "&ground=1" : ""}${state.drifters === "all" ? "" : `&drifters=${state.drifters}`}${state.season === null ? "" : `&season=${D.seasons.codes[state.season]}`}`;
     try { history.replaceState(null, "", `#${h}`); } catch (e) { /* some browsers block this on file:// pages */ }
   }
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
-    const out = { view: p.get("view") === "forecast" ? "forecast" : "explore", ground: p.get("ground") === "1" };
+    const out = { ground: p.get("ground") === "1" };
     if (p.get("drifters") === "undrogued") out.drifters = "undrogued";
     const season = D.seasons.codes.indexOf(p.get("season"));
     if (season >= 0) out.season = season;
@@ -938,7 +859,7 @@
 
   // ---------- "How to read this" ----------
   function renderInfo() {
-    const m = D.meta, Q = m.checks || {}, A = D.sets.all, U = D.sets.undrogued, UQ = Q.undrogued || {};
+    const m = D.meta, Q = m.checks || {}, A = D.sets.all, U = D.sets.undrogued, UQ = Q.undrogued || {}, S = D.season_pattern;
     const cal = Q.line_90 || ["about 90", "about 90", "about 85"], ex = Q.left_box || ["somewhat", "somewhat"], yr = Q.year_width || "1.5", c1 = Q.cell_1y || ["1", "1"], cov = Q.coverage;
     $("#infoBody").innerHTML = `
       <h3>Using it</h3>
@@ -966,10 +887,11 @@
       </ul>
       <h3>Seasons</h3>
       <ul>
+        ${S ? `<li>${S.summary} ${S.notes[0]}</li><li>${S.notes[1]}</li>` : ""}
         <li>Choose a season and the material is released on its first day: 1 December for summer, 1 March for autumn, 1 June for winter, 1 September for spring (southern hemisphere).</li>
         <li><b>Crossing seasons:</b> each 15-day step uses the matrix of the season it starts in, changing every ${M.perSeason * TAU} days as the timeline shows. A year released in summer runs summer, autumn, winter, spring.</li>
         ${Q.seasons ? `<li>${Q.seasons.detail}</li>` : ""}
-        <li>A season's squares rest on about a quarter of the data, so each is pulled towards its all-year row, which also pulls the seasons together. The ranges use ${m.n_boot_season} replicates, and are worked out every 15 days to 3 months, then every 30 days to a year and every 90 days after that, with the days between read off a line.
+        <li>A season's squares rest on about a quarter of the data, so each is pulled towards its all-year row, which also pulls the seasons together: the map keeps ${Q.seasons && Q.seasons.kept ? `about ${Q.seasons.kept.all}% of the gap above (${Q.seasons.kept.undrogued}% undrogued)` : "only part of the gap above"}. The ranges use ${m.n_boot_season} replicates, and are worked out every 15 days to 3 months, then every 30 days to a year and every 90 days after that, with the days between read off a line.
           The grounding chance doesn't change with the season.</li>
       </ul>
       <h3>Groundings</h3>
@@ -1032,7 +954,6 @@
   $("#stepsIn").max = M.maxSteps;
   $("#stepsIn").addEventListener("input", (e) => setSteps(+e.target.value, false));
   $("#stepsIn").addEventListener("change", (e) => setSteps(+e.target.value, true));
-  $$(".mode").forEach((b) => b.addEventListener("click", () => b.dataset.view !== state.view && setView(b.dataset.view)));
   function setLayer(k, on) {
     state.layers[k] = on;
     const b = $(`.toggle[data-layer="${k}"]`);
@@ -1057,10 +978,9 @@
     state.t = +e.target.value; state.playing = false; dirty = true;
   });
   document.addEventListener("keydown", (e) => {
-    if (e.target.closest("input, button, select, textarea, dialog") || state.view !== "explore") return;
+    if (e.target.closest("input, button, select, textarea, dialog")) return;
     if (e.code === "Space" && R) { e.preventDefault(); $("#playBtn").click(); }
   });
-  new ResizeObserver(moveGlider).observe($(".modes"));
   new ResizeObserver(resize).observe(wrap);
   window.addEventListener("resize", fitSide);
 
@@ -1085,7 +1005,6 @@
 
   // ---------- start ----------
   renderInfo();
-  if (D.forecast) $("#forecastTabSub").textContent = "Through the year";
   const init = readHash();
   if (init.drifters) state.drifters = init.drifters;
   if (init.season !== undefined) state.season = init.season;
@@ -1099,7 +1018,7 @@
   resize(); fitSide();
   renderStart();
   if (init.start && init.steps) run();
-  setView(init.view);
+  syncResults(); writeHash();
   renderLegend(); updateTimeUI();
   requestAnimationFrame(frame);
   window.__drift = { MODELS, model: () => M, state, run: () => R }; // for the console

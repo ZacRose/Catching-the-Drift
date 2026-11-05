@@ -39,7 +39,8 @@ What goes in app/data/app_data.js (window.DRIFT_DATA):
 - the grid, which cells are all land (for the page's contours), the box, the Benguela zone
   (coastal_zone in config/region.yaml) and its coastal cells, the subregions and named releases (connectivity.py),
   drifters per cell, the land outline.
-- forecast: the Seasons view's block if FORECAST_PATH exists (src.forecasting.seasonal_robustness), else null.
+- season_pattern: what the drifters themselves show through the year, for the "How to read this" panel, if PATTERN_PATH
+  exists (src.forecasting.seasonal_robustness), else null.
 - meta.checks: the numbers behind the page's "How far to trust it" notes (trust_checks), read from the results.
 
 Every quantity is linear in the distribution, or (the centre) a ratio of linear ones, so for all start
@@ -47,13 +48,6 @@ cells at once they come from stepping P backwards on eight vectors, F_n = P F_(n
 start cell i's value after n steps. 8 matrix-vector products per step instead of 596 forward runs. Having reached the
 coast isn't linear in this way, but its vector is first-passage's own recursion: F_n = P F_(n-1), then 1 at coastal
 cells. With seasons, a chain's steps aren't all the same matrix, so each is walked back from its last step (season_walk).
-
-The Seasons view (Business, RQ4): src.forecasting.seasonal_robustness saves a JSON file at FORECAST_PATH, and
-rerunning this script puts it in the page, which draws it as a chart with intervals. The expected shape is
-    {"title": str, "summary": str, "quantity": str, "unit": str,
-     "series": [{"label": str, "x": [str, ...], "y": [float, ...],
-                 "low": [float, ...] (optional), "high": [float, ...] (optional), "kind": "observed" | "forecast"}],
-     "notes": [str, ...]}
 
 Run: python3 -m src.app.export_app_data   (about 25 minutes; needs data/processed/transitions_tau15d.npz,
 shrinkage_P_2deg_tau15d.npz from src.inference.shrinkage_fit, the undrogued matrix from src.inference.drogue_comparison,
@@ -82,7 +76,7 @@ from src.inference.transition_data import TAU_DAYS, TRANSITIONS_PATH, load_trans
 from src.linalg.connectivity import box_cells, subregion_map
 
 APP_DATA_PATH = os.path.join(REPO_ROOT, "app", "data", "app_data.js")
-FORECAST_PATH = os.path.join(PROCESSED_DIR, "seasonal_forecast_app.json")
+PATTERN_PATH = os.path.join(PROCESSED_DIR, "seasonal_pattern_app.json")
 MAX_STEPS = 72  # 1,080 days, about 3 years: past the 2.7 years after which the coastal start is forgotten
 QUANTITIES = ("pct_left_box", "pct_in_benguela", "pct_in_coastal_zone", "centre_lat", "centre_lon", "centre_km",
               "pct_aground", "pct_reached_coast")
@@ -368,7 +362,7 @@ def from_log16(text):
     return np.where(code == 65535, np.nan, out)
 
 
-def load_forecast(path=FORECAST_PATH):
+def load_pattern(path=PATTERN_PATH):
     if not os.path.exists(path):
         return None
     with open(path) as f:
@@ -624,7 +618,7 @@ if __name__ == "__main__":
         "shore": {"cells": shores.tolist()},
         "sets": sets,
         "land": land_outline(),
-        "forecast": load_forecast(),
+        "season_pattern": load_pattern(),
     }
     os.makedirs(os.path.dirname(APP_DATA_PATH), exist_ok=True)
     with open(APP_DATA_PATH, "w") as f:
@@ -632,5 +626,4 @@ if __name__ == "__main__":
         f.write("window.DRIFT_DATA = ")
         json.dump(data, f, separators=(",", ":"))
         f.write(";\n")
-    print(f"Saved {APP_DATA_PATH} ({os.path.getsize(APP_DATA_PATH) / 1e6:.1f} MB); forecast block: "
-          f"{'included' if data['forecast'] else 'none yet'}")
+    print(f"Saved {APP_DATA_PATH} ({os.path.getsize(APP_DATA_PATH) / 1e6:.1f} MB)")

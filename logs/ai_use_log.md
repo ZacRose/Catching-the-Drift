@@ -392,3 +392,14 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - which release cells have no moves in each season (5 of 9 in DJF; undrogued 5 of 8);
   - every control clicked through on the real data in headless Chrome, including undrogued at the 3 cells with none, with no errors; screenshots at desktop and 390 px.
 - **Not done:** `src.run_all` wasn't run end to end again (each changed step was rerun in order, and its 1 hour 50 minutes is added up from them); the seasonal ranges have no known-truth simulation; the undrogued whole-coast ranges aren't corrected, only flagged; no literature was checked; nothing was pushed, and no decision was made for the team.
+
+## 2026-11-05 - Removing the app's tabs (Claude Code)
+- **Asked (Zac):** what is the point of the "Seasons: Through the year" tab, which doesn't fit with the rest of the app? If it should go, remove the "Drift explorer" button too, show that view directly, and keep the information button.
+- **AI's view:** remove it. It began as a placeholder for a seasonal forecast and became a fixed chart. It ignored the start, timeframe and switches, and it blanked the map. Once the map had a season switch, it was a second, disconnected answer to the same question. The one thing worth keeping is what the drifters themselves show, the real summer-winter gap, so that moved to the information panel.
+- **Mistake to note for the critical reflection:** when the AI added the season switch it kept this tab, and even added a button linking it to the map, rather than asking whether it still earned its place. It was Zac who asked, after the AI had listed the page as finished, under a brief that said less is more.
+- **Changed:** both tabs and their code removed from the page; the information button sits beside the title; `seasonal_robustness.py` writes only the text the panel shows (`seasonal_pattern_app.json`, replacing `seasonal_forecast_app.json`); a test that the page has no tabs and keeps its information button; decision 16, section 9, `app/README.md`.
+- **Checked:**
+  - 139 tests pass.
+  - The data file, compared block by block with the one before: P, the seasons and every interval are identical. Only the tab's block changed, so `check_intervals.py` wasn't rerun for this.
+  - `seasonal_robustness.csv` is unchanged.
+  - In headless Chrome on the real data: every remaining control clicked through with no errors, the information panel opens and quotes the pattern, an old link to the Seasons view opens the map, and screenshots at desktop and 390 px.

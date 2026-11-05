@@ -27,22 +27,9 @@
         <h1>South Atlantic Gyre Drift Explorer</h1>
       </div>
 
-      <div class="top-right">
-        <nav class="modes" role="tablist" aria-label="What to explore">
-          <button class="mode" role="tab" data-view="explore" aria-selected="true">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
-            <span><b><span class="long">Drift explorer</span><span class="short">Drift</span></b><small>Start anywhere on the map</small></span>
-          </button>
-          <button class="mode" role="tab" data-view="forecast" aria-selected="false">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg>
-            <span><b><span class="long">Seasons</span><span class="short">Seasons</span></b><small id="forecastTabSub">In progress</small></span>
-          </button>
-          <span class="mode-glider" aria-hidden="true"></span>
-        </nav>
-        <button class="info-btn" id="infoBtn" aria-label="How to read this" title="How to read this">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle class="dot" cx="12" cy="7.6" r="1.1"/></svg>
-        </button>
-      </div>
+      <button class="info-btn" id="infoBtn" aria-label="How to read this" title="How to read this">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle class="dot" cx="12" cy="7.6" r="1.1"/></svg>
+      </button>
     </header>
 
     <main class="layout">
@@ -76,13 +63,6 @@
 
           <div class="map-hint" id="mapHint"></div>
           <div class="tooltip" id="tooltip" role="status"></div>
-
-          <div class="map-veil" id="mapVeil" hidden>
-            <div>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg>
-              <p>The seasonal pattern is shown in the panel on the right.</p>
-            </div>
-          </div>
         </div>
 
         <div class="legend" id="legend"></div>
@@ -142,7 +122,6 @@
           <section class="card results" id="results" hidden aria-live="polite"></section>
         </div>
 
-        <section class="card forecast" id="forecastPanel" hidden></section>
       </aside>
     </main>
 

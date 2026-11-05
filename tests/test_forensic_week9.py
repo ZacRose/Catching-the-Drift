@@ -6,7 +6,7 @@ import os
 import numpy as np
 import pytest
 
-from src.app.export_app_data import FORECAST_PATH, trust_checks
+from src.app.export_app_data import PATTERN_PATH, trust_checks
 from src.common.config import load_region_bounds
 from src.forecasting.seasonal_robustness import (
     app_block, fixed_mix_gaps, season_year_sums, shuffled_gap, subset_table, years_higher,
@@ -330,21 +330,17 @@ def signal(**kw):
 
 
 def check_block(block):
-    assert {"title", "summary", "quantity", "unit", "series", "notes"} <= set(block)
-    for s in block["series"]:
-        assert len(s["x"]) == len(s["y"]) == 4
-        if "low" in s:
-            assert all(lo <= y <= hi for lo, y, hi in zip(s["low"], s["y"], s["high"]))
-    assert "forecast for a particular date" in " ".join(block["notes"])
+    assert set(block) == {"summary", "notes"} and len(block["notes"]) == 2  # renderInfo shows both
+    assert "forecast for a particular date" in block["notes"][1]
 
 
-def test_seasons_block_has_the_shape_the_page_draws():
+def test_seasons_block_has_the_shape_the_page_shows():
     check_block(app_block(signal(), signal(djf_minus_jja=83.0), signal(djf_minus_jja=24.0), {"mae_annual_km": 33.0, "mae_seasonal_km": 26.0}))
 
 
-@pytest.mark.skipif(not os.path.exists(FORECAST_PATH), reason="run python3 -m src.forecasting.seasonal_robustness first")
-def test_saved_seasons_block_has_the_shape_the_page_draws():
-    with open(FORECAST_PATH) as f:
+@pytest.mark.skipif(not os.path.exists(PATTERN_PATH), reason="run python3 -m src.forecasting.seasonal_robustness first")
+def test_saved_seasons_block_has_the_shape_the_page_shows():
+    with open(PATTERN_PATH) as f:
         check_block(json.load(f))
 
 
