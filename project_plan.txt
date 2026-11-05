@@ -901,6 +901,63 @@ For the team to confirm:
 3. Because seasonal forecasts are not reliably better than the benchmark, the report should say seasonal
    differences are real but forecasting them is uncertain, not that a validated risk window exists.
 
+Week 9 status - App (2026-11-02, branch week9-app; not yet reviewed by the team; revised twice the
+same day after team feedback)
+An interactive front end for the product: app/index.html (open by double-clicking; any browser, no
+Python, server or internet). Data: python3 -m src.app.export_app_data (about 5 minutes, after
+src.inference.shrinkage_fit), then python3 -m src.app.check_intervals (about 2 minutes). No existing
+file or output was changed.
+1. What it does: the user picks a start anywhere in the box (map click, typed position, or the whole
+   Benguela coast at once, the Week 6 release) and then a timeframe (15 days to 3 years in 15-day
+   steps). Choosing the timeframe plays the drift once: smooth contour bands of the chance of being
+   in each 2 deg cell (or the cells themselves with "Grid cells"), the areas holding 50% and 90% of
+   what is still in the water, and the path of its centre. A results panel then slides in beside
+   the map: distance travelled, left the box, in the Benguela zone, near the Benguela coast, each
+   with a 95% interval and a small chart over time. A Loop switch replays the drift, an (i) button
+   explains everything once, and each start shows a data flag (100+ / 10-99 / under 10 drifters)
+   with its key. A "Seasonal forecast" tab is a placeholder until RQ4 is done: Business saves
+   data/processed/seasonal_forecast_app.json (format in export_app_data.py's docstring) and reruns the
+   exporter.
+2. Groundings (new, a switch on the map): the product leaves out starts whose record ended (decision
+   10), so material only drifts or leaves the box. With the switch on, the app uses a second model in
+   which it can also run aground. GDP's typedeath 1 marks 208 drifters that ran aground; their starts in
+   the last 15 days of the record become moves into an absorbing "aground" state for the stretch of
+   coast where they came ashore. The place is the drifter's last 00:00 position in the box, moved to
+   the nearest cell the coastline passes through; it is a median 9 km from the true last reading,
+   checked against the region cache. Result: 199 drifters on 29 stretches of coast. 9 lie more than a
+   cell from the 1:110m coastline (5 at small islands it doesn't draw, 4 mid-ocean) and are left out.
+   Each cell's grounding chance is shrunk towards its 4 deg parent's with the product's alpha, and its
+   product row is scaled by the chance of staying afloat, so the water part is still the product. The
+   coastline is coloured by the chance of having come ashore there. It is highest on north-east Brazil:
+   about 40% per 15 days from the cells off Recife (51-53 drifters). After a year, 38.7% (29.4-48.8) of
+   material released off Recife has run aground, 8.8% (6.0-12.3) from St Helena and 5.7% (0.9-10.8)
+   from the Benguela coast, mostly on Brazil.
+3. How: the exporter packs P (float32), the grounding rows and, for both models, bootstrap intervals
+   for every start cell and step into app/data/app_data.js (9.6 MB). The water model uses bootstrap.py's
+   own 1000 replicates (seed 3001); the shore model resamples its drifters the same way (10 grounded
+   drifters have no other usable moves, so its draws differ). The intervals are computed by stepping P
+   backwards on seven vectors, and the page steps either model forward itself.
+4. Checks:
+   - The water model's coast release reproduces coastal_release_tau15d.csv (largest difference 5e-5,
+     the CSV's rounding).
+   - The page's maths, run in headless Chrome, matches Python for both models at 8 starts and 15, 90,
+     360 and 1080 days.
+   - Bootstrap (src/app/check_intervals.py, outputs/results/app_interval_check.csv): 416 of the app's
+     intervals (8 starts, 4 horizons, every quantity, both models) were recomputed the slow way (row
+     weights, forward steps, np.quantile) on the same draws. They match to 1e-7 (float rounding), and
+     every full-data estimate lies inside its interval. The bagged mean (the average over replicates)
+     sits within a median 1% of the interval's width of the full-data estimate (90% within 7%). The
+     largest gaps are in thin cells, e.g. a 15-day distance of 178 km bagged vs 152 km from 7 drifters
+     (interval 94-290 km). Note that the app's numbers are the full-data fit; the bootstrap gives only
+     the intervals, it isn't bagging.
+   - Tests: tests/test_app.py, 7 tests (backward vs forward stepping, the shore fit with and without
+     shrinkage, the grounding rule, fast vs brute-force intervals, distances and zone cells, float32
+     round trip, and the page against Python; the last is skipped without Chrome). 68 tests in the
+     repo, all passing.
+For the team to confirm: (1) the grounding rule and leaving out the 9 groundings far from the mapped
+coast; (2) shrinking the grounding chance with the product's alpha; (3) the whole-coast start flagged
+"very thin" (median coastal cell 7 drifters); (4) a 3-year limit on the timeframe.
+
 Week 9 - Report draft
 - Whole team: first full draft (background, methods, findings, recommendations), including an
   honest "plan vs what actually happened" section. Presentation outline in parallel.

@@ -196,3 +196,81 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - Time in the box rises with the lag (10 to 26 years). 1 deg rests on its prior (2% of cells adequate), and so does a 2 deg 2010+ matrix (1%).
   - The code ran unchanged on the second box.
 - **Still to verify by the team:** the choices above; whether the report frames the product as pooled "floating material and water" with the undrogued run as the floating-material case; the 1:10m coastline for 1 deg.
+
+## 2026-11-02 - Week 9 app: Benguela Drift Explorer (Claude Code)
+- **Asked (Zac):** an easy-to-use application, working on any machine, where a user enters a location and a timeframe and sees where material ends up, with confidence. It should separate starts anywhere in the Benguela, starts anywhere in the region, and the forecasting work (still in progress). It should look user-friendly, have animations, and not break anything already done.
+- **Produced (branch `week9-app`, new files only):**
+  - `src/app/export_app_data.py` packs the product and its bootstrap intervals into `app/data/app_data.js`.
+  - `app/` holds the page: `index.html`, `css/style.css`, `js/model.js` (the maths) and `js/app.js` (map, animation, controls), plus `app/README.md`.
+  - `tests/test_app.py` (5 tests) and `tests/app_check.html`.
+  - A "Week 9 status - App" block in the plan.
+- **Choices made by the AI (for the team to confirm):**
+  - plain HTML/JavaScript with the data embedded, rather than a Python app (Streamlit/Dash), so it runs offline with nothing to install;
+  - the Benguela zone reuses `coastal_zone`;
+  - the preset places;
+  - a 3-year maximum timeframe;
+  - 50% / 90% "likely areas" taken over the material still in the box;
+  - a placeholder forecast view with a JSON hook, rather than guessing the forecast's form.
+- **Checked:**
+  - 61 existing tests passed before and after, and `git status` shows no existing file or output changed.
+  - The exporter reproduces `coastal_release_tau15d.csv` (largest difference 5e-5).
+  - The page's maths matches `Product.forecast` to 2e-7, run in headless Chrome.
+  - Screenshots at desktop and phone widths were inspected by eye.
+  - A Chrome console check across seven views found one real bug (a negative first animation step that read before the start of an array). It was fixed and rechecked with no errors.
+- **Still to verify by the team:** the choices above; try the page on Windows and in Safari, which weren't tested here (older Safari versions ignore the canvas blur, so the map looks slightly blockier there); plug in the seasonal forecast when it is ready.
+
+## 2026-11-02 - Week 9 app: revision after team feedback (Claude Code)
+- **Asked (Zac, passing on team feedback):** the page was too busy.
+  - Remove the place buttons; keep latitude/longitude and the data flag, with a key for what "limited data" means.
+  - Play the animation once after a timeframe is chosen, with an optional loop.
+  - Show the results after the animation, beside the map rather than over it, explained once and clearly.
+  - Move "How to read this" behind an (i) button at the top.
+  - Make the colour key and the 50%/90% key clearer.
+  - Remove the moving dots (random paths) and the red exit trails.
+- **Changed:**
+  - `app/index.html`, `app/css/style.css` and `app/js/app.js` were rewritten; `model.js` lost only the unused path sampler. The data, the exporter and the tests are unchanged.
+  - The map's colours are now four bands (0.01-0.1%, 0.1-1%, 1-10%, 10%+), shared with the legend. The legend is a strip under the map, so it never covers results.
+  - Both outlines are white over a dark edge, keyed as "50% / 90% chance it's inside".
+  - The results are one panel of four rows (value, 95% range, small chart). Each quantity is described once, and pointing at a row highlights its area on the map.
+  - On wide screens the side panel scrolls on its own, so the map never moves.
+  - Nothing animates on its own any more (no pulsing marker, marching lines or shimmer).
+- **AI's choices (for the team to confirm):**
+  - the whole-coast start is flagged "very thin" because the median coastal square has 7 drifters (5 of 9 under 10);
+  - before the first run the page waits for a timeframe rather than playing a default;
+  - after the first run, changing the start replays automatically.
+- **Checked:**
+  - A scripted run in headless Chrome stepped through the whole flow: landing, choosing a timeframe, one play, results, loop on and off, scrubbing, typed positions, a start outside the zone, mode switches, the forecast view, the coverage layer, the (i) dialog and row highlighting. It found no errors, and the state was as expected at each step.
+  - No console errors on six pages.
+  - Screenshots at 1440x900, 1280x720 and phone width were inspected by eye.
+  - 66 tests pass.
+
+## 2026-11-02 - Week 9 app: groundings, contours, one region, bootstrap check (Claude Code)
+- **Asked (Zac):**
+  - show where material runs aground on the map, as a toggle: the in-water map is only part of the distribution;
+  - draw continuous contours rather than blurred grid cells when "Grid cells" is off;
+  - drop the Benguela / whole-region distinction;
+  - confirm the bagging behind the confidence intervals works;
+  - remove the subtitle and make the title fill the space.
+- **Produced:**
+  - A shore model in `src/app/export_app_data.py` (`groundings()`, `shore_fit()`), and a second set of bootstrap intervals for it.
+  - `src/app/check_intervals.py`, with output `outputs/results/app_interval_check.csv`.
+  - The page:
+    - contour bands from a bilinear, lightly smoothed log field, with 50%/90% outlines as joined contour lines;
+    - a Groundings switch that colours the coastline by the chance of having come ashore, plus a "Ran aground" result;
+    - one explorer view, plus the forecast tab;
+    - a larger title with no subtitle.
+  - Updated tests (`tests/test_app.py`, 7 tests), README, and the plan block.
+- **AI's choices (for the team to confirm):**
+  - grounding place = the last 00:00 position in the box, moved to the nearest coastline cell within one cell;
+  - the 9 groundings further away are dropped;
+  - grounding chances are shrunk to the 4 deg parent with the product's alpha. The first, unshrunk version gave a coastal cell with only grounded drifters a 100% chance, which was the reason;
+  - the shore model's bootstrap resamples its own drifter set (10 more drifters than the water model);
+  - the light smoothing of the contour field (about a third of a cell).
+- **Checked:**
+  - The grounding place was compared against each drifter's true last reading in the region cache: median 9 km away, 5 of 208 actually ended just outside the box.
+  - The exporter still reproduces the coastal release CSV.
+  - The brute-force interval check matches to 1e-7 for both models, and 416 of 416 estimates lie inside their intervals.
+  - The bagged mean against the estimate: median gap 1% of the interval width.
+  - Headless Chrome: the page's maths against Python for both models, a scripted run through the whole user flow (no errors), no console errors on six pages, and screenshots at desktop and phone width.
+  - 68 tests pass.
+- **Note for the report:** the app's numbers are the full-data fit and the bootstrap gives the intervals only; this is not bagging, though the bagged means are reported in the check CSV.
