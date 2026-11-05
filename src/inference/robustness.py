@@ -43,7 +43,7 @@ Limitations:
 
 Outputs: outputs/results/robustness_tau15d.csv and outputs/figures/robustness.png.
 
-Run: python3 -m src.inference.robustness   (about 20 minutes; needs every transitions_tau*d.npz,
+Run: python3 -m src.inference.robustness   (about 3 minutes; needs every transitions_tau*d.npz,
 drifter_split.csv and shrinkage_P_2deg_tau15d.npz)
 """
 import csv

@@ -307,7 +307,8 @@
     return blend;
   }
   function drawHeat() {
-    const c = ctx.heat, g = M.region, cover = state.layers.coverage, dist = cover ? null : currentDist();
+    const c = ctx.heat, g = M.region, explore = state.view === "explore", cover = explore && state.layers.coverage;
+    const dist = !explore || cover ? null : currentDist();
     c.clearRect(0, 0, map.w, map.h);
     if (cover || dist) {
       const binOf = cover ? (v) => { const f = flagOf(10 ** v + 1e-9); return f && f.rgba; }
@@ -401,6 +402,7 @@
       c.restore();
     }
 
+    if (state.view !== "explore") return; // the Seasons view shows only the zone its chart is about
     const show = R && !state.layers.coverage && state.t > 0;
     // where it has run aground: the coastline coloured by the chance, stretch by stretch
     if (show && state.layers.ground) {
@@ -667,13 +669,22 @@
     $("#forecastPanel").hidden = !fc;
     $("#mapVeil").hidden = !fc || !!D.forecast;
     $("#timeline").style.visibility = fc ? "hidden" : "";
+    $("#loopBtn").style.visibility = fc ? "hidden" : "";
+    $("#legend").style.visibility = fc ? "hidden" : "";
+    $("#mapHint").hidden = fc;
+    $(".map-toggles").hidden = fc;
+    if (fc) tip.classList.remove("show");
     state.highlight = null;
     if (fc) renderForecast();
     syncResults(); writeHash(); dirty = true;
+    if (fc && D.forecast) state.highlight = "benguela"; // the area the Seasons chart is about
   }
+  let gliderPlaced = false;
   function moveGlider() {
     const on = $(`.mode[data-view="${state.view}"]`), g = $(".mode-glider");
+    if (!gliderPlaced) g.style.transition = "none"; // on load it starts in place, rather than sliding in from the corner
     g.style.left = `${on.offsetLeft}px`; g.style.width = `${on.offsetWidth}px`;
+    if (!gliderPlaced) { void g.offsetWidth; g.style.transition = ""; gliderPlaced = true; }
   }
 
   // ---------- forecast view ----------
@@ -681,7 +692,7 @@
     const el = $("#forecastPanel"), F = D.forecast;
     if (!F) {
       el.innerHTML = `<span class="badge soon">In progress</span>
-        <h2>Seasonal forecast</h2>
+        <h2>Seasons</h2>
         <p>Does the drift change predictably with the seasons? This view will show the team's seasonal forecast: one year's seasonal pattern forecast from earlier years only, then checked against what actually happened.</p>
         <ol>
           <li><b>Pick a season</b> and see how the drift from the Benguela differs from the all-year picture.</li>
@@ -692,11 +703,12 @@
         <code>src/app/export_app_data.py</code> and rerun <code>python3 -m src.app.export_app_data</code>. This panel then draws it.</div>`;
       return;
     }
-    const W = 360, H = 190, l = 42, r = 12, t = 14, b = 30;
+    const W = 360, H = 190, l = 42, r = 34, t = 14, b = 30;
+    const roundUp = (v) => { const p = 10 ** Math.floor(Math.log10(v)), m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; };
     const series = F.series || [];
     const xs = [...new Set(series.flatMap((s) => s.x))];
     const vals = series.flatMap((s) => [...s.y, ...(s.high || []), ...(s.low || [])]).filter(isFinite);
-    const top = Math.max(...vals) * 1.05, bot = Math.min(0, ...vals);
+    const top = roundUp(Math.max(...vals) * 1.02), bot = Math.min(0, ...vals);
     const X1 = (v) => l + ((W - l - r) * xs.indexOf(v)) / Math.max(xs.length - 1, 1);
     const Y1 = (v) => t + (H - t - b) * (1 - (v - bot) / (top - bot));
     const colours = ["#38bdf8", "#fbbf24", "#2dd4bf", "#fb7185"];
@@ -708,11 +720,11 @@
       const c = colours[i % colours.length];
       const ln = s.x.map((v, k) => `${k ? "L" : "M"}${X1(v)},${Y1(s.y[k])}`).join("");
       const band = s.low && s.high ? `<path class="band" fill="${c}" d="${s.x.map((v, k) => `${k ? "L" : "M"}${X1(v)},${Y1(s.high[k])}`).join("")}${s.x.map((v, k) => [X1(v), Y1(s.low[k])]).reverse().map(([a, bb]) => `L${a},${bb}`).join("")}Z"/>` : "";
-      return `${band}<path class="line" stroke="${c}" d="${ln}" ${s.kind === "forecast" ? 'stroke-dasharray="6 4"' : ""}/>`;
+      return `${band}<path class="line" stroke="${c}" d="${ln}" ${s.kind === "forecast" || s.dashed ? 'stroke-dasharray="6 4"' : ""}/>`;
     }).join("");
-    el.innerHTML = `<span class="badge ready">Seasonal outlook</span><h2>${F.title || "Seasonal forecast"}</h2><p>${F.summary || ""}</p>
+    el.innerHTML = `<span class="badge ready">Seasonal pattern</span><h2>${F.title || "Seasons"}</h2><p>${F.summary || ""}</p>
       <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${F.quantity || "Forecast"}">${g}${xl}${paths}</svg></div>
-      <div class="keys">${series.map((s, i) => `<span><i style="background:${colours[i % colours.length]}"></i>${s.label}</span>`).join("")}</div>
+      <div class="keys">${series.map((s, i) => `<span>${keyLine(s.kind === "forecast" || s.dashed, colours[i % colours.length], 2.4)}${s.label}</span>`).join("")}</div>
       ${F.quantity ? `<p class="fine">${F.quantity}${F.unit ? ` (${F.unit})` : ""}</p>` : ""}
       ${(F.notes || []).length ? `<ul class="fine">${F.notes.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}`;
   }
@@ -802,7 +814,8 @@
 
   // ---------- "How to read this" ----------
   function renderInfo() {
-    const m = D.meta;
+    const m = D.meta, Q = m.checks || {};
+    const cal = Q.line_90 || ["about 90", "about 90", "about 85"], ex = Q.left_box || ["somewhat", "somewhat"], yr = Q.year_width || "1.5", c1 = Q.cell_1y || ["1", "1"], cov = Q.coverage;
     $("#infoBody").innerHTML = `
       <h3>Using it</h3>
       <ul>
@@ -842,7 +855,15 @@
           to each resample and run from the same start, and the range covers the middle 95% of the answers. The numbers shown are from the model fitted to all drifters.</li>
         <li>All seasons, and drifters with and without their drogue, are pooled. This is the typical near-surface drift of water and floating material, not a forecast for a particular date.
           Material more exposed to wind (e.g. oil or debris) tends to travel further west and leave more often.</li>
-        <li>Chaining 15-day steps slightly overstates how much leaves the study area (about 1 point at 30 days and 3 points at 90 days).</li>
+        <li>The ranges show the effect of which drifters we happened to have. They leave out how much the ocean changes from year to year, which would widen some of them: resampling whole years instead makes the range for the centre's longitude about ${yr} times as wide.</li>
+      </ul>
+      <h3>How far to trust it</h3>
+      <ul>
+        <li>Checked on drifters the model never saw. Chances of being in a square hold up out to a year: squares given about a ${c1[0]}% chance after a year really held drifters ${c1[1]}% of the time.</li>
+        <li>The 90% line really held ${cal[0]}% of those drifters after 15 days, ${cal[1]}% after 3 months and ${cal[2]}% after a year, so treat it as a little optimistic at long times.</li>
+        <li>The chance of having left the study area runs high at long times: ${ex[0]} after 3 months and ${ex[1]} after a year, across all starts.</li>
+        ${cov ? `<li>In a simulation where the truth is known, the 95% ranges held it about ${cov[0]}% of the time from well-sampled squares, ${cov[1]}% from limited ones and ${cov[2]}% from very thin ones.
+          For the whole-coast start it is only about ${cov[3]}%, because that start rests on thin squares, so its ranges are too narrow.</li>` : ""}
       </ul>`;
     $("#buildInfo").textContent = `Product: ${m.product} · data built ${m.built}`;
   }
@@ -913,7 +934,7 @@
 
   // ---------- start ----------
   renderInfo();
-  if (D.forecast) $("#forecastTabSub").textContent = "Seasonal outlook";
+  if (D.forecast) $("#forecastTabSub").textContent = "Through the year";
   const init = readHash();
   if (init.start) state.start = init.start;
   if (init.ground) setLayer("ground", true);

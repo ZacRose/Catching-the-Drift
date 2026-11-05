@@ -10,12 +10,14 @@ Files read (all in data/processed/, made by the commands in the docstrings of ea
 - shrinkage_P_2deg_tau15d.npz          P, counts, alpha, start_drifters  (src.inference.shrinkage_fit)
 - shrinkage_P_2deg_tau15d_bootstrap.npz se, ci_low, ci_high per entry    (src.inference.bootstrap)
 - long_run_shrinkage_P_2deg_tau15d.npz  long-run pattern and intervals   (src.linalg.long_run; optional)
+and for the 4 deg baseline the naive_P_4deg_tau15d files, from src.gridding.transitions and the same scripts.
 
 Example:
     from src.linalg.product import load_product
     prod = load_product()
     dist = prod.forecast(lat=-28.0, lon=14.0, days=90)   # 6 steps of 15 days
     prod.summary(dist)                                   # % left the box, centre, top cells
+    baseline = load_product(cell_size=4.0)               # the 4 deg naive P, the proposal's baseline (objective O1)
 
 What it is and isn't (for the report and for anyone using it):
 - States are 2 deg cells of the box in config/region.yaml, plus "left the box" (the last state,
@@ -23,8 +25,9 @@ What it is and isn't (for the report and for anyone using it):
   undrogued drifters pooled (decision 6), 1994-2022, all seasons together.
 - Forecasts move in whole 15-day steps; a non-multiple of 15 days is refused rather than rounded.
   markov_check.py shows chaining 15-day steps predicts held-out 30- and 90-day moves at least as
-  well as matrices fitted to those lags directly, but over-states exits (about 1 point at 30 days,
-  3 points at 90 days, per cell).
+  well as matrices fitted to those lags directly. Chances of being in a cell hold up on held-out drifters
+  out to a year, but the chance of having left the box runs high at long times: for test drifters, 6.6%
+  predicted against 5.2% observed after 90 days, and 15.4% against 10.4% after a year (calibration.py).
 - Rows for cells with no drifters (prior_only) are the 4 deg prior alone, and intervals for cells
   with under about 10 drifters are unreliable (bootstrap.py); check start_drifters.
 """
@@ -34,7 +37,7 @@ import numpy as np
 
 from src.common.config import PROCESSED_DIR
 from src.gridding.grid import grid_edges
-from src.gridding.transitions import TAU_DAYS
+from src.gridding.transitions import BASELINE_CELL_SIZE, TAU_DAYS
 from src.ingest.load import in_box
 
 BOX_KEYS = ("lat_min", "lat_max", "lon_min", "lon_max")
@@ -99,8 +102,11 @@ class Product:
 
 
 def load_product(cell_size=2.0, tau_days=TAU_DAYS, processed_dir=PROCESSED_DIR):
-    """The 2 deg shrinkage P with its bootstrap uncertainty (and the long-run pattern if saved)."""
-    stem = os.path.join(processed_dir, f"shrinkage_P_{cell_size:g}deg_tau{tau_days}d")
+    """A P with its bootstrap uncertainty (and the long-run pattern if saved): the 2 deg shrinkage P by default,
+    or the 4 deg naive P with cell_size=4.0. The naive P has no row for a cell with no drifters, so material
+    arriving there is lost; alpha is 0, as it has no prior."""
+    name = "naive_P" if cell_size == BASELINE_CELL_SIZE else "shrinkage_P"
+    stem = os.path.join(processed_dir, f"{name}_{cell_size:g}deg_tau{tau_days}d")
     for path in (stem + ".npz", stem + "_bootstrap.npz"):
         if not os.path.exists(path):
             raise FileNotFoundError(f"{path} not found: run src.inference.shrinkage_fit, then src.inference.bootstrap.")
@@ -110,11 +116,11 @@ def load_product(cell_size=2.0, tau_days=TAU_DAYS, processed_dir=PROCESSED_DIR):
     lat_c, lon_c = np.meshgrid(0.5 * (lat_edges[:-1] + lat_edges[1:]), 0.5 * (lon_edges[:-1] + lon_edges[1:]),
                                indexing="ij")
     long_run = {}
-    lr_path = os.path.join(processed_dir, f"long_run_shrinkage_P_{cell_size:g}deg_tau{tau_days}d.npz")
+    lr_path = os.path.join(processed_dir, f"long_run_{name}_{cell_size:g}deg_tau{tau_days}d.npz")
     if os.path.exists(lr_path):
         long_run = {k: v for k, v in np.load(lr_path).items() if k not in BOX_KEYS}
     return Product(P=p["P"], se=b["se"], ci_low=b["ci_low"], ci_high=b["ci_high"],
-                   start_drifters=p["start_drifters"], alpha=float(p["alpha"]), region=region,
+                   start_drifters=p["start_drifters"], alpha=float(p["alpha"]) if "alpha" in p.files else 0.0, region=region,
                    cell_size=float(p["cell_size_deg"]), tau_days=int(p["tau_days"]),
                    lat_centre=lat_c.ravel(), lon_centre=lon_c.ravel(), long_run=long_run)
 

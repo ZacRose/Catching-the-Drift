@@ -19,3 +19,19 @@ coastal_zone:
   lat_max: -18
   lon_min: 0
   lon_max: 20
+# Subregions for RQ1, "which subregions supply which others" (src/linalg/connectivity.py). Each is a box
+# whose edges fall on 2 deg cell edges; together they cover R once each. "Benguela coast" isn't listed: it is
+# the coastal cells above, taken out of whichever box holds them. Brazil-Malvinas is region_swap.py's test box.
+subregions:
+  - {name: Benguela offshore, lat_min: -34, lat_max: -18, lon_min: 0, lon_max: 20}
+  - {name: Angola Basin, lat_min: -18, lat_max: -4, lon_min: 0, lon_max: 20}
+  - {name: Cape Basin, lat_min: -42, lat_max: -34, lon_min: 0, lon_max: 20}
+  - {name: Central South Atlantic, lat_min: -42, lat_max: -18, lon_min: -30, lon_max: 0}
+  - {name: Tropical South Atlantic, lat_min: -18, lat_max: -4, lon_min: -30, lon_max: 0}
+  - {name: Brazil-Malvinas, lat_min: -42, lat_max: -20, lon_min: -60, lon_max: -30}
+  - {name: North-east Brazil, lat_min: -20, lat_max: -4, lon_min: -60, lon_max: -30}
+# Named release points (proposal objective O2). The Orange Basin cell holds the Venus (Block 2913B, about
+# 290 km offshore) and Mopane (Block 2813A) discoveries, reading each block number as degrees south and east
+# (29 13, 28 13). Published well coordinates weren't found, so check this before quoting it as a well site.
+named_releases:
+  - {name: Orange Basin, lat_min: -30, lat_max: -28, lon_min: 12, lon_max: 14}

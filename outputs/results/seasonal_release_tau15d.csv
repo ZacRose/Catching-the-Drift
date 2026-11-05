@@ -1,73 +1,73 @@
 release_season,steps,days,quantity,estimate,ci_low,ci_high
-DJF,6,90,pct_left_R,0.1835,0.0713,0.3385
-DJF,6,90,pct_in_coastal_zone,0.8879,0.4502,1.5733
-DJF,6,90,centre_lat,-24.331,-24.7617,-23.8253
-DJF,6,90,centre_lon,2.9442,2.092,3.6667
-DJF,24,360,pct_left_R,2.0707,1.5412,2.6729
-DJF,24,360,pct_in_coastal_zone,0.0923,0.0588,0.1316
-DJF,24,360,centre_lat,-24.0198,-24.555,-23.4905
-DJF,24,360,centre_lon,-14.7266,-15.9432,-13.5821
-MAM,6,90,pct_left_R,0.1824,0.0583,0.3955
-MAM,6,90,pct_in_coastal_zone,6.1487,1.9401,15.6683
-MAM,6,90,centre_lat,-23.8613,-24.6769,-23.1009
-MAM,6,90,centre_lon,4.0076,2.9834,5.1017
-MAM,24,360,pct_left_R,2.4199,1.7584,3.4738
-MAM,24,360,pct_in_coastal_zone,0.0203,0.0114,0.0315
-MAM,24,360,centre_lat,-24.0541,-24.8156,-23.2367
-MAM,24,360,centre_lon,-16.3993,-17.6556,-14.9444
-JJA,6,90,pct_left_R,0.4989,0.1168,1.1038
-JJA,6,90,pct_in_coastal_zone,5.0804,2.4284,10.2716
-JJA,6,90,centre_lat,-23.0864,-24.0174,-22.1273
-JJA,6,90,centre_lon,3.9124,2.9749,4.8514
-JJA,24,360,pct_left_R,2.3749,1.4942,3.8355
-JJA,24,360,pct_in_coastal_zone,0.0383,0.0199,0.0668
-JJA,24,360,centre_lat,-24.2666,-25.0617,-23.4306
-JJA,24,360,centre_lon,-16.876,-18.3056,-15.3646
-SON,6,90,pct_left_R,0.3926,0.1383,0.8034
-SON,6,90,pct_in_coastal_zone,3.6293,1.5384,8.0267
-SON,6,90,centre_lat,-22.7705,-23.4727,-22.0144
-SON,6,90,centre_lon,2.4393,1.5432,3.3206
-SON,24,360,pct_left_R,2.2604,1.5577,3.1882
-SON,24,360,pct_in_coastal_zone,0.1562,0.099,0.2209
-SON,24,360,centre_lat,-23.5344,-24.2045,-22.8566
-SON,24,360,centre_lon,-16.2096,-17.7732,-14.7781
-All seasons,6,90,pct_left_R,0.3671,0.1633,0.6621
-All seasons,6,90,pct_in_coastal_zone,2.9592,1.8812,4.6397
-All seasons,6,90,centre_lat,-23.5507,-23.9672,-23.1506
-All seasons,6,90,centre_lon,3.3847,2.8081,3.9058
-All seasons,24,360,pct_left_R,2.2556,1.7455,2.9219
-All seasons,24,360,pct_in_coastal_zone,0.0636,0.0471,0.0843
-All seasons,24,360,centre_lat,-24.0138,-24.4986,-23.5222
-All seasons,24,360,centre_lon,-15.9634,-16.9822,-14.878
-DJF minus all seasons,6,90,pct_left_R,-0.1836,-0.451,0.0464
-DJF minus all seasons,6,90,pct_in_coastal_zone,-2.0713,-3.4835,-0.9737
-DJF minus all seasons,6,90,centre_lat,-0.7803,-1.2307,-0.2968
-DJF minus all seasons,6,90,centre_lon,-0.4405,-1.1145,0.1508
-DJF minus all seasons,24,360,pct_left_R,-0.1848,-0.7895,0.4185
-DJF minus all seasons,24,360,pct_in_coastal_zone,0.0287,0.0011,0.0627
-DJF minus all seasons,24,360,centre_lat,-0.006,-0.4035,0.4077
-DJF minus all seasons,24,360,centre_lon,1.2369,0.4413,1.9792
-MAM minus all seasons,6,90,pct_left_R,-0.1847,-0.4453,0.054
-MAM minus all seasons,6,90,pct_in_coastal_zone,3.1895,-0.6105,11.6374
-MAM minus all seasons,6,90,centre_lat,-0.3106,-0.9942,0.3184
-MAM minus all seasons,6,90,centre_lon,0.6229,-0.2112,1.6879
-MAM minus all seasons,24,360,pct_left_R,0.1643,-0.3959,0.9501
-MAM minus all seasons,24,360,pct_in_coastal_zone,-0.0433,-0.0612,-0.0258
-MAM minus all seasons,24,360,centre_lat,-0.0403,-0.6333,0.6144
-MAM minus all seasons,24,360,centre_lon,-0.4359,-1.3075,0.5361
-JJA minus all seasons,6,90,pct_left_R,0.1319,-0.0969,0.5494
-JJA minus all seasons,6,90,pct_in_coastal_zone,2.1213,-0.3471,6.5656
-JJA minus all seasons,6,90,centre_lat,0.4643,-0.3815,1.2403
-JJA minus all seasons,6,90,centre_lon,0.5276,-0.1335,1.2735
-JJA minus all seasons,24,360,pct_left_R,0.1194,-0.5197,1.2263
-JJA minus all seasons,24,360,pct_in_coastal_zone,-0.0253,-0.0434,-0.0017
-JJA minus all seasons,24,360,centre_lat,-0.2529,-0.8667,0.4029
-JJA minus all seasons,24,360,centre_lon,-0.9126,-1.8245,0.031
-SON minus all seasons,6,90,pct_left_R,0.0255,-0.1563,0.2755
-SON minus all seasons,6,90,pct_in_coastal_zone,0.6701,-1.3505,4.2913
-SON minus all seasons,6,90,centre_lat,0.7802,0.2532,1.3002
-SON minus all seasons,6,90,centre_lon,-0.9455,-1.6498,-0.226
-SON minus all seasons,24,360,pct_left_R,0.0048,-0.5204,0.6459
-SON minus all seasons,24,360,pct_in_coastal_zone,0.0926,0.0467,0.1462
-SON minus all seasons,24,360,centre_lat,0.4793,0.0062,0.9522
-SON minus all seasons,24,360,centre_lon,-0.2462,-1.2117,0.6565
+DJF,6,90,pct_left_R,0.1835,0.0747,0.359
+DJF,6,90,pct_in_coastal_zone,0.8879,0.4151,1.566
+DJF,6,90,centre_lat,-24.331,-24.8456,-23.8057
+DJF,6,90,centre_lon,2.9442,2.0749,3.7114
+DJF,24,360,pct_left_R,2.0707,1.568,2.7284
+DJF,24,360,pct_in_coastal_zone,0.0923,0.0579,0.1315
+DJF,24,360,centre_lat,-24.0198,-24.5326,-23.4741
+DJF,24,360,centre_lon,-14.7266,-16.0712,-13.5573
+MAM,6,90,pct_left_R,0.1824,0.059,0.3854
+MAM,6,90,pct_in_coastal_zone,6.1487,2.0817,16.0422
+MAM,6,90,centre_lat,-23.8613,-24.5521,-23.0618
+MAM,6,90,centre_lon,4.0076,3.0191,5.1996
+MAM,24,360,pct_left_R,2.4199,1.6823,3.5273
+MAM,24,360,pct_in_coastal_zone,0.0203,0.011,0.0319
+MAM,24,360,centre_lat,-24.0541,-24.8147,-23.184
+MAM,24,360,centre_lon,-16.3993,-17.789,-15.1467
+JJA,6,90,pct_left_R,0.4989,0.123,1.1257
+JJA,6,90,pct_in_coastal_zone,5.0804,2.5095,10.1637
+JJA,6,90,centre_lat,-23.0864,-24.0479,-22.0748
+JJA,6,90,centre_lon,3.9124,3.0277,4.8267
+JJA,24,360,pct_left_R,2.3749,1.4221,3.9798
+JJA,24,360,pct_in_coastal_zone,0.0383,0.0216,0.0652
+JJA,24,360,centre_lat,-24.2666,-25.0664,-23.3391
+JJA,24,360,centre_lon,-16.876,-18.3349,-15.4793
+SON,6,90,pct_left_R,0.3926,0.1318,0.7947
+SON,6,90,pct_in_coastal_zone,3.6293,1.5333,7.9291
+SON,6,90,centre_lat,-22.7705,-23.4495,-22.0999
+SON,6,90,centre_lon,2.4393,1.4903,3.2742
+SON,24,360,pct_left_R,2.2604,1.5296,3.2314
+SON,24,360,pct_in_coastal_zone,0.1562,0.0977,0.2214
+SON,24,360,centre_lat,-23.5344,-24.2159,-22.8674
+SON,24,360,centre_lon,-16.2096,-17.6824,-14.843
+All seasons,6,90,pct_left_R,0.3671,0.1728,0.6618
+All seasons,6,90,pct_in_coastal_zone,2.9592,1.8651,4.4192
+All seasons,6,90,centre_lat,-23.5507,-23.9349,-23.093
+All seasons,6,90,centre_lon,3.3847,2.7776,3.8838
+All seasons,24,360,pct_left_R,2.2556,1.7455,2.9196
+All seasons,24,360,pct_in_coastal_zone,0.0636,0.047,0.0833
+All seasons,24,360,centre_lat,-24.0138,-24.5127,-23.5081
+All seasons,24,360,centre_lon,-15.9634,-17.0743,-14.8786
+DJF minus all seasons,6,90,pct_left_R,-0.1836,-0.4666,0.0434
+DJF minus all seasons,6,90,pct_in_coastal_zone,-2.0713,-3.2919,-1.0331
+DJF minus all seasons,6,90,centre_lat,-0.7803,-1.2443,-0.2926
+DJF minus all seasons,6,90,centre_lon,-0.4405,-1.1223,0.2379
+DJF minus all seasons,24,360,pct_left_R,-0.1848,-0.8097,0.3978
+DJF minus all seasons,24,360,pct_in_coastal_zone,0.0287,0.0015,0.0601
+DJF minus all seasons,24,360,centre_lat,-0.006,-0.4144,0.4074
+DJF minus all seasons,24,360,centre_lon,1.2369,0.4279,1.9961
+MAM minus all seasons,6,90,pct_left_R,-0.1847,-0.4614,0.0423
+MAM minus all seasons,6,90,pct_in_coastal_zone,3.1895,-0.6549,12.1957
+MAM minus all seasons,6,90,centre_lat,-0.3106,-0.9146,0.3264
+MAM minus all seasons,6,90,centre_lon,0.6229,-0.2236,1.7455
+MAM minus all seasons,24,360,pct_left_R,0.1643,-0.4749,0.9691
+MAM minus all seasons,24,360,pct_in_coastal_zone,-0.0433,-0.0607,-0.0288
+MAM minus all seasons,24,360,centre_lat,-0.0403,-0.6034,0.6064
+MAM minus all seasons,24,360,centre_lon,-0.4359,-1.327,0.5064
+JJA minus all seasons,6,90,pct_left_R,0.1319,-0.0947,0.5489
+JJA minus all seasons,6,90,pct_in_coastal_zone,2.1213,-0.0573,6.6355
+JJA minus all seasons,6,90,centre_lat,0.4643,-0.3451,1.2523
+JJA minus all seasons,6,90,centre_lon,0.5276,-0.1426,1.302
+JJA minus all seasons,24,360,pct_left_R,0.1194,-0.5016,1.4371
+JJA minus all seasons,24,360,pct_in_coastal_zone,-0.0253,-0.0433,-0.0018
+JJA minus all seasons,24,360,centre_lat,-0.2529,-0.8683,0.3945
+JJA minus all seasons,24,360,centre_lon,-0.9126,-1.8249,0.0013
+SON minus all seasons,6,90,pct_left_R,0.0255,-0.1539,0.2448
+SON minus all seasons,6,90,pct_in_coastal_zone,0.6701,-1.3301,4.3982
+SON minus all seasons,6,90,centre_lat,0.7802,0.2197,1.2803
+SON minus all seasons,6,90,centre_lon,-0.9455,-1.6727,-0.2105
+SON minus all seasons,24,360,pct_left_R,0.0048,-0.5098,0.6336
+SON minus all seasons,24,360,pct_in_coastal_zone,0.0926,0.0441,0.1462
+SON minus all seasons,24,360,centre_lat,0.4793,-0.0049,0.8955
+SON minus all seasons,24,360,centre_lon,-0.2462,-1.1249,0.6545

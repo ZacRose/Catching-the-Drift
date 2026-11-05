@@ -150,7 +150,7 @@ svg { stroke-linecap: round; stroke-linejoin: round; }
 .scrub-ticks span:first-child { transform: none; }
 .scrub-ticks span:last-child { transform: translateX(-100%); }
 .loop-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border-radius: 12px; border: 1px solid var(--border);
-  background: var(--panel-2); color: var(--muted); font-size: 0.82rem; font-weight: 600; transition: all 0.2s; }
+  background: var(--panel-2); color: var(--muted); font-size: 0.82rem; font-weight: 600; transition: color 0.2s, background 0.2s, border-color 0.2s; }
 .loop-btn svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; }
 .loop-btn[aria-pressed="true"] { color: #032026; background: var(--accent); border-color: transparent; }
 .loop-btn:hover { color: var(--text); border-color: var(--border-strong); }
@@ -250,6 +250,10 @@ input[type="range"]:disabled::-webkit-slider-thumb { background: #64748b; border
   border-radius: 8px; background: var(--panel-2); color: var(--text); font-size: 0.78rem; font-weight: 700; }
 .forecast li b { color: var(--text); }
 .fine { margin: 8px 0 0; color: var(--faint); font-size: 0.76rem; }
+.forecast .keys svg { width: 26px; height: 12px; flex: none; margin-right: 6px; vertical-align: -1px; }
+.forecast ul.fine { list-style: none; margin: 10px 0 0; padding: 0; }
+.forecast ul.fine li { counter-increment: none; padding: 8px 0; border-top: 1px solid var(--border); }
+.forecast ul.fine li::before { content: none; }
 .forecast .team-note { padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--border-strong); font-size: 0.78rem; color: var(--faint); }
 .forecast .chart svg { width: 100%; height: auto; display: block; overflow: visible; }
 .forecast .chart line { stroke: rgba(148, 190, 230, 0.12); }

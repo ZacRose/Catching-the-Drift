@@ -22,8 +22,8 @@ Links can be shared: the address bar keeps the view, e.g. `index.html#start=cell
    plays it again.
 
 Turn on **Loop** to keep replaying it, or drag the timeline to any day. The ⓘ button at the top
-explains the map, the groundings, the data flags and where the numbers come from. The **Seasonal
-forecast** tab is a placeholder until the Business forecast (RQ4) is done (see below).
+explains the map, the groundings, the data flags, where the numbers come from and how far to trust them.
+The **Seasons** tab shows how the drift changes through the year (see below).
 
 On the map:
 - Colour bands show the chance of being in each 2° square, drawn as smooth contours through the
@@ -43,7 +43,7 @@ the chosen day, and pointing at one highlights its area on the map.
 
 - `src/app/export_app_data.py` packs two models into `app/data/app_data.js`, each with drifter
   bootstrap intervals (1,000 replicates) for every start square and 15-day step. Run:
-  `python3 -m src.app.export_app_data` (about 5 minutes).
+  `python3 -m src.app.export_app_data` (about 7 minutes).
   - **water** is the product itself, the 2° shrinkage P (alpha 56.2, 15-day steps). Its intervals
     are `bootstrap.py`'s own replicates, and the script stops if the whole-coast release doesn't
     reproduce `outputs/results/coastal_release_tau15d.csv`.
@@ -64,10 +64,12 @@ the chosen day, and pointing at one highlights its area on the map.
 
 Rerun the exporter whenever the product changes (e.g. a new alpha or bootstrap).
 
-## Adding the seasonal forecast
+## The Seasons view
 
-Save the forecast as `data/processed/seasonal_forecast_app.json` and rerun the exporter. The
-expected shape is in the docstring of `src/app/export_app_data.py`: series of labelled values with
-optional low and high bounds. The forecast view then draws them as a chart. A richer forecast, e.g.
-a seasonal P to step forward on the map, needs a matching change in `renderForecast()` in
-`app/js/app.js`.
+The **Seasons** tab shows how westward drift from the Benguela zone changes through the year, with its 95%
+range, and how that differs for drifters with and without their drogue. It's a pattern, not a forecast: the
+data stop in October 2022, and the best method is simply the average of past years' same season. It
+comes from `python3 -m src.forecasting.seasonal_robustness`, which saves
+`data/processed/seasonal_forecast_app.json`; rerun the exporter to update the page. The format is in the docstring
+of `src/app/export_app_data.py`. A season switch on the map was considered and left out (decision 16 in
+`project_plan.txt`).

@@ -1,13 +1,17 @@
 target,method,n_forecasts,MAE,skill,ci_low,ci_high
-offshore_km,Annual mean (benchmark),31,31.6497,,,
-offshore_km,Seasonal mean,31,26.0971,0.1754,-0.1337,0.3896
-offshore_km,Recency-weighted seasonal mean,31,28.9562,0.0851,-0.273,0.3316
-offshore_km,Last year's season (naive),31,38.4657,-0.2154,-0.7416,0.0949
-north_km,Annual mean (benchmark),31,27.5756,,,
-north_km,Seasonal mean,31,27.1365,0.0159,-0.1041,0.0913
-north_km,Recency-weighted seasonal mean,31,27.8256,-0.0091,-0.167,0.1529
-north_km,Last year's season (naive),31,35.8331,-0.2994,-0.5356,-0.0774
-exit_pct,Annual mean (benchmark),60,0.8023,,,
-exit_pct,Seasonal mean,60,0.8343,-0.0399,-0.1108,0.0032
-exit_pct,Recency-weighted seasonal mean,60,0.5747,0.2837,0.1311,0.3816
-exit_pct,Last year's season (naive),60,0.5818,0.2748,-0.0235,0.4828
+offshore_km,Annual mean (benchmark),31,32.9987,,,
+offshore_km,Seasonal mean,31,25.8903,0.2154,-0.0038,0.3979
+offshore_km,Recency-weighted seasonal mean,31,28.1669,0.1464,-0.1233,0.3558
+offshore_km,Last year's season (naive),31,38.4657,-0.1657,-0.5985,0.095
+north_km,Annual mean (benchmark),31,28.3588,,,
+north_km,Seasonal mean,31,28.0976,0.0092,-0.0989,0.0849
+north_km,Recency-weighted seasonal mean,31,29.7827,-0.0502,-0.1668,0.0501
+north_km,Last year's season (naive),31,35.8331,-0.2636,-0.488,-0.0727
+exit_pct,Annual mean (benchmark),60,0.5652,,,
+exit_pct,Seasonal mean,60,0.551,0.0251,-0.0091,0.0618
+exit_pct,Recency-weighted seasonal mean,60,0.5505,0.026,-0.0869,0.1275
+exit_pct,Last year's season (naive),60,0.5818,-0.0294,-0.2915,0.2027
+leave_north_pct,Annual mean (benchmark),31,0.7373,,,
+leave_north_pct,Seasonal mean,31,0.7821,-0.0608,-0.2437,0.1527
+leave_north_pct,Recency-weighted seasonal mean,31,0.8413,-0.1411,-0.2641,0.0138
+leave_north_pct,Last year's season (naive),31,1.0621,-0.4406,-1.0258,-0.1025

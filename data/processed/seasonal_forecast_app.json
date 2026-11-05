@@ -1,0 +1,74 @@
+{
+ "title": "Does the drift change with the seasons?",
+ "summary": "Yes, in one clear way. Material starting in the Benguela zone drifts further west in summer and spring (about 120 km per 15 days) than in winter (about 70 km). Summer beat winter in 8 of the 8 years with enough drifters to compare.",
+ "quantity": "Westward distance per 15 days from the Benguela zone, outlined on the map",
+ "unit": "km",
+ "series": [
+  {
+   "label": "All drifters (shaded: 95% range, resampling whole years)",
+   "x": [
+    "Summer (DJF)",
+    "Autumn (MAM)",
+    "Winter (JJA)",
+    "Spring (SON)"
+   ],
+   "y": [
+    121.94,
+    93.15,
+    69.41,
+    122.85
+   ],
+   "low": [
+    107.03,
+    85.75,
+    59.65,
+    108.02
+   ],
+   "high": [
+    136.17,
+    101.28,
+    78.22,
+    137.55
+   ],
+   "kind": "observed"
+  },
+  {
+   "label": "Lost their drogue (also pushed by the wind)",
+   "x": [
+    "Summer (DJF)",
+    "Autumn (MAM)",
+    "Winter (JJA)",
+    "Spring (SON)"
+   ],
+   "y": [
+    156.25,
+    110.91,
+    73.0,
+    146.57
+   ],
+   "kind": "observed"
+  },
+  {
+   "label": "Drogue attached (follow the water)",
+   "x": [
+    "Summer (DJF)",
+    "Autumn (MAM)",
+    "Winter (JJA)",
+    "Spring (SON)"
+   ],
+   "y": [
+    88.09,
+    76.63,
+    64.57,
+    81.85
+   ],
+   "kind": "observed",
+   "dashed": true
+  }
+ ],
+ "notes": [
+  "The pattern is mainly in drifters that have lost their drogue, which the wind pushes directly: +83 km between summer and winter, against +24 km for drifters that follow the water, whose range (-4 to +47 km) includes no difference.",
+  "This is a typical pattern, not a forecast for a particular date. Knowing the season cuts the typical error in a season's westward drift from 33 km to 26 km, so one year can still differ a lot from the average.",
+  "The drift map pools all seasons. Starting in a different season moves the centre of the material by about 1\u00b0 after 3 months, so the map is a fair guide whatever the season."
+ ]
+}

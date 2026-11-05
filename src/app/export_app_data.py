@@ -32,21 +32,22 @@ What goes in app/data/app_data.js (window.DRIFT_DATA):
   computed by the page. src/app/check_intervals.py re-derives a sample of them by brute force.
 - the grid, which cells are all land (for the page's contours), the box, the Benguela zone
   (coastal_zone in config/region.yaml) and its coastal cells, drifters per cell, the land outline.
-- forecast: the seasonal forecast block if FORECAST_PATH exists, else null.
+- forecast: the Seasons view's block if FORECAST_PATH exists (src.forecasting.seasonal_robustness), else null.
+- meta.checks: the numbers behind the page's "How far to trust it" notes (trust_checks), read from the results.
 
 Every quantity is linear in the distribution, or (the centre) a ratio of linear ones, so for all start
 cells at once they come from stepping P backwards on seven vectors, F_n = P F_(n-1): row i of F_n is
 start cell i's value after n steps. 7 matrix-vector products per step instead of 596 forward runs.
 
-Seasonal forecast hook (Business, RQ4): when the forecast is done, save a JSON file at FORECAST_PATH
-and rerun this script. The app draws it as a chart with intervals; the expected shape is
-    {"title": str, "summary": str, "quantity": str, "unit": "%",
+The Seasons view (Business, RQ4): src.forecasting.seasonal_robustness saves a JSON file at FORECAST_PATH, and
+rerunning this script puts it in the page, which draws it as a chart with intervals. The expected shape is
+    {"title": str, "summary": str, "quantity": str, "unit": str,
      "series": [{"label": str, "x": [str, ...], "y": [float, ...],
                  "low": [float, ...] (optional), "high": [float, ...] (optional), "kind": "observed" | "forecast"}],
      "notes": [str, ...]}
 Anything richer (e.g. a seasonal P to step forward) needs a matching change in app/js/app.js.
 
-Run: python3 -m src.app.export_app_data   (about 5 minutes; needs data/processed/transitions_tau15d.npz,
+Run: python3 -m src.app.export_app_data   (about 7 minutes; needs data/processed/transitions_tau15d.npz,
 shrinkage_P_2deg_tau15d.npz from src.inference.shrinkage_fit and data/external/ne_110m_land.geojson)
 """
 import base64
@@ -296,6 +297,36 @@ def load_forecast(path=FORECAST_PATH):
         return json.load(f)
 
 
+def trust_checks(results_dir=RESULTS_DIR):
+    """What the page's "How far to trust it" notes quote, from calibration.py and year_intervals.py, so the
+    wording can't drift from the checks. Empty if they haven't been run (the page then speaks more generally)."""
+    cal_path = os.path.join(results_dir, f"calibration_tau{TAU_DAYS}d.csv")
+    year_path = os.path.join(results_dir, f"year_intervals_tau{TAU_DAYS}d.csv")
+    if not (os.path.exists(cal_path) and os.path.exists(year_path)):
+        return {}
+    with open(cal_path) as f:
+        cal = list(csv.DictReader(f))
+    with open(year_path) as f:
+        year = list(csv.DictReader(f))
+    line = {r["days"]: float(r["observed_pct"]) for r in cal if r["check"] == "likely area"
+            and r["cells"] == "all with drifters" and float(r["level_pct"]) == 90}
+    left = {r["days"]: (float(r["predicted_pct"]), float(r["observed_pct"])) for r in cal
+            if r["check"] == "having left the box" and r["cells"] == "all starts"}
+    cell = next(r for r in cal if r["check"] == "reliability" and r["days"] == "360" and float(r["bin_low"]) == 0.01)
+    width = next(r for r in year if r["quantity"] == "centre_lon" and r["days"] == "360")
+    out = {"line_90": [f"{line[d]:.0f}" for d in ("15", "90", "360")],
+           "left_box": [f"{left[d][0]:.1f}% predicted against {left[d][1]:.1f}% observed" for d in ("90", "360")],
+           "cell_1y": [f"{float(cell['predicted_pct']):.1f}", f"{float(cell['observed_pct']):.1f}"],
+           "year_width": f"{float(width['width_ratio']):.1f}"}
+    coverage_path = os.path.join(results_dir, f"interval_coverage_tau{TAU_DAYS}d.csv")
+    if os.path.exists(coverage_path):
+        with open(coverage_path) as f:
+            cover = list(csv.DictReader(f))
+        median = lambda word: float(np.median([float(r["pct_covered"]) for r in cover if word in r["starts"]]))
+        out["coverage"] = [f"{median(word):.0f}" for word in ("100+", "10-99", "under 10", "whole")]
+    return out
+
+
 def build_models(region, table, stored, alpha, land):
     """Both models' states, fit, data and start rows (see the module docstring)."""
     fine, coarse = region["cell_size_deg"], BASELINE_CELL_SIZE
@@ -386,7 +417,7 @@ if __name__ == "__main__":
         "meta": {"built": datetime.date.today().isoformat(), "product": f"shrinkage_P_{fine:g}deg_tau{TAU_DAYS}d.npz",
                  "alpha": alpha, "n_boot": N_BOOT, "level": LEVEL, "n_drifters": int(np.unique(table["drifter_id"]).size),
                  "n_moves": int(table["drifter_id"].size), "years": [int(years.min()), int(years.max())],
-                 "n_grounded": g["n_kept"], "n_grounded_dropped": g["n_dropped"]},
+                 "n_grounded": g["n_kept"], "n_grounded_dropped": g["n_dropped"], "checks": trust_checks()},
         "region": {k: float(region[k]) for k in ("lat_min", "lat_max", "lon_min", "lon_max")} | {"label": region["label"]},
         "benguela": {k: float(zone[k]) for k in ("lat_min", "lat_max", "lon_min", "lon_max")} | {"label": zone["label"]},
         "cell_size": fine, "n_lat": int(product["n_lat_cells"]), "n_lon": int(product["n_lon_cells"]),
