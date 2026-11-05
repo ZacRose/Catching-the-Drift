@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Benguela Drift Explorer</title>
+  <meta name="description" content="Pick a starting point and a timeframe and see where the surface flow is likely to carry floating material in the Benguela and South Atlantic, with 95% intervals.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230a2540'/%3E%3Cpath d='M5 18c3-3 5-3 8 0s5 3 8 0 5-3 6-1' stroke='%232dd4bf' stroke-width='2.6' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='21' cy='11' r='3' fill='%23fbbf24'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="fatal" class="fatal" hidden>
+    <h1>Data file missing</h1>
+    <p>The app couldn't find <code>app/data/app_data.js</code>. From the repository root, run
+      <code>python3 -m src.app.export_app_data</code> and reload this page.</p>
+  </div>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+          <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#38bdf8"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs>
+          <circle cx="20" cy="20" r="19" fill="#0b2a45" stroke="url(#lg)" stroke-width="1.5"/>
+          <path d="M6 23c4-4 6-4 10 0s6 4 10 0 6-4 8-2" stroke="url(#lg)" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <circle cx="26" cy="13" r="3.6" fill="#fbbf24"/>
+        </svg>
+        <h1>Benguela Drift Explorer</h1>
+      </div>
+
+      <div class="top-right">
+        <nav class="modes" role="tablist" aria-label="What to explore">
+          <button class="mode" role="tab" data-view="explore" aria-selected="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>
+            <span><b><span class="long">Drift explorer</span><span class="short">Drift</span></b><small>Start anywhere on the map</small></span>
+          </button>
+          <button class="mode" role="tab" data-view="forecast" aria-selected="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+            <span><b><span class="long">Seasonal forecast</span><span class="short">Forecast</span></b><small id="forecastTabSub">In progress</small></span>
+          </button>
+          <span class="mode-glider" aria-hidden="true"></span>
+        </nav>
+        <button class="info-btn" id="infoBtn" aria-label="How to read this" title="How to read this">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle class="dot" cx="12" cy="7.6" r="1.1"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="map-panel" aria-label="Map">
+        <div class="map-wrap" id="mapWrap">
+          <canvas id="baseCanvas"></canvas>
+          <canvas id="heatCanvas"></canvas>
+          <canvas id="fxCanvas" role="img" aria-label="Map of where material is likely to be. Click to choose a starting point."></canvas>
+
+          <div class="day-counter" id="dayCounter" hidden>
+            <span class="day-label">Day</span>
+            <span class="day-num" id="dayNum">0</span>
+            <span class="day-of" id="dayOf">of 90</span>
+          </div>
+
+          <div class="map-toggles" role="group" aria-label="Map layers">
+            <button class="toggle on" data-layer="areas" aria-pressed="true" title="Lines around the areas the material is 50% and 90% likely to be in">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg>Likely areas
+            </button>
+            <button class="toggle" data-layer="ground" aria-pressed="false" title="Include drifters that ran aground, and show where on the coast material comes ashore">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17c3-2 5-2 8 0s5 2 8 0"/><path d="M12 3v9M8.5 9.5 12 13l3.5-3.5"/></svg>Groundings
+            </button>
+            <button class="toggle" data-layer="cells" aria-pressed="false" title="Show the 2° squares the model uses instead of a smoothed picture">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM4 12h16M12 4v16"/></svg>Grid cells
+            </button>
+            <button class="toggle" data-layer="coverage" aria-pressed="false" title="How many drifters started a move in each square">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M10 19V6M15 19v-9M20 19v-4"/></svg>Data coverage
+            </button>
+          </div>
+
+          <div class="map-hint" id="mapHint"></div>
+          <div class="tooltip" id="tooltip" role="status"></div>
+
+          <div class="map-veil" id="mapVeil" hidden>
+            <div>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7 15l4-4 3 3 5-6"/></svg>
+              <p>The seasonal forecast is shown in the panel on the right.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend" id="legend"></div>
+
+        <div class="timeline" id="timeline">
+          <button class="icon-btn" id="playBtn" aria-label="Play" disabled>
+            <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5l12 7-12 7z"/></svg>
+            <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
+            <svg class="i-replay" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg>
+          </button>
+          <div class="scrub">
+            <input type="range" id="scrub" min="0" max="6" step="0.01" value="0" aria-label="Scrub through time" disabled>
+            <div class="scrub-ticks" id="scrubTicks"></div>
+          </div>
+          <button class="loop-btn" id="loopBtn" aria-pressed="false" title="Replay the drift over and over">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>
+            <span>Loop</span>
+          </button>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div id="explorer" class="explorer">
+          <section class="card controls">
+            <div class="step">
+              <div class="step-head"><span class="num">1</span><h2>Where does it start?</h2></div>
+              <p class="hint">Click anywhere in the study area on the map, or type a position.</p>
+              <form class="coord-row" id="coordForm" autocomplete="off">
+                <label><span>Latitude</span><input id="latIn" placeholder="e.g. 28S"></label>
+                <label><span>Longitude</span><input id="lonIn" placeholder="e.g. 14E"></label>
+                <button type="submit" class="ghost-btn">Go</button>
+              </form>
+              <div class="start-summary" id="startSummary"></div>
+            </div>
+
+            <div class="step" id="timeStep">
+              <div class="step-head"><span class="num">2</span><h2>How long?</h2><span class="time-readout"><b id="daysOut">90</b> days <small id="daysHuman">about 3 months</small></span></div>
+              <input type="range" id="stepsIn" min="1" max="72" value="6" step="1" aria-label="Timeframe in 15-day steps">
+              <div class="chips" id="timeChips"></div>
+            </div>
+          </section>
+
+          <section class="card results" id="results" hidden aria-live="polite"></section>
+        </div>
+
+        <section class="card forecast" id="forecastPanel" hidden></section>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <span>Data: NOAA Global Drifter Program hourly drifters (via clouddrift) · Coastline: Natural Earth</span>
+      <span id="buildInfo"></span>
+    </footer>
+  </div>
+
+  <dialog class="info" id="infoDialog" aria-labelledby="infoTitle">
+    <div class="info-head">
+      <h2 id="infoTitle">How to read this</h2>
+      <button class="close-btn" id="infoClose" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="info-body" id="infoBody"></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="alert" hidden></div>
+
+  <script src="data/app_data.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

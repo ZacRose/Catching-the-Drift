@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Drift Explorer model check</title>
+</head>
+<body>
+  <!-- Runs app/js/model.js on app/data/app_data.js (both variants) and prints the results as JSON,
+       for tests/test_app.py to compare with Python (headless Chrome, --dump-dom). -->
+  <pre id="out">pending</pre>
+  <script src="../app/data/app_data.js"></script>
+  <script src="../app/js/model.js"></script>
+  <script>
+    (function () {
+      const out = document.getElementById("out");
+      try {
+        const starts = [{ kind: "coast" }, ...[103, 198, 317, 353, 368, 547, 122].map((cell) => ({ kind: "cell", cell }))];
+        const steps = [1, 6, 24, 72], results = {}, nStates = {};
+        let cellOf = null;
+        for (const variant of ["water", "shore"]) {
+          const M = new DriftModel.Model(window.DRIFT_DATA, variant);
+          nStates[variant] = M.nStates;
+          cellOf = M.cellOf(-28.0, 14.0);
+          results[variant] = starts.map((start) => {
+            const dists = M.propagate(M.startVector(start), Math.max(...steps));
+            return {
+              start, steps: steps.map((n) => {
+                const s = M.stats(dists[n], start), a = M.likelyAreas(dists[n], [0.5, 0.9]);
+                const top = Array.from(dists[n].slice(0, M.nCells)).map((p, c) => [c, p]).sort((x, y) => y[1] - x[1]).slice(0, 5);
+                return { n, stats: s, mass: dists[n].reduce((x, y) => x + y, 0), top,
+                         areas: a.map((r) => ({ level: r.level, cells: r.cells })),
+                         interval: M.interval(start, "pct_left_box", n) };
+              }),
+            };
+          });
+        }
+        out.textContent = JSON.stringify({ ok: true, n_states: nStates, cell_of: cellOf, results });
+      } catch (e) {
+        out.textContent = JSON.stringify({ ok: false, error: String(e) });
+      }
+    })();
+  </script>
+</body>
+</html>
