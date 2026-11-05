@@ -24,8 +24,12 @@ average size of the bias, ignoring its sign.
 What it can't show: the world here is exactly Markov and doesn't change from year to year, so this tests the
 estimator and the bootstrap only. markov_check.py, calibration.py and year_intervals.py test those assumptions.
 
-Output: outputs/results/interval_coverage_tau15d.csv
-Run: python3 -m src.inference.interval_coverage   (about 6 minutes; --n-sim 20 for a quick look)
+The same is done for the undrogued matrix (drogue_comparison.py), whose cells are thinner. The seasons' intervals aren't
+tested this way.
+
+Outputs: outputs/results/interval_coverage_tau15d.csv and interval_coverage_undrogued_tau15d.csv
+Run: python3 -m src.inference.interval_coverage   (about 13 minutes, 6-7 per set; --n-sim 20 for a quick look,
+--drifters all or undrogued for one set)
 """
 import argparse
 import csv
@@ -38,6 +42,7 @@ from src.gridding.grid import grid_edges, per_cell_counts
 from src.gridding.transitions import BASELINE_CELL_SIZE, TAU_DAYS
 from src.inference.adequacy import N_MIN
 from src.inference.bootstrap import LEVEL, SEED, percentile_interval, replicate_matrices, shrinkage_fit
+from src.inference.drogue_comparison import UNDROGUED_STEM, undrogued_only
 from src.inference.estimators import count_matrix
 from src.inference.transition_data import load_transitions, parent_states, to_states
 
@@ -100,16 +105,10 @@ def numbers(P, F0, starts, steps=STEPS):
     return out
 
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    ap.add_argument("--n-sim", type=int, default=N_SIM, help="synthetic worlds (default %(default)s)")
-    ap.add_argument("--n-boot", type=int, default=N_BOOT_SIM, help="bootstrap replicates per world (default %(default)s)")
-    args = ap.parse_args()
-
-    region = load_region_bounds()
+def run(table, product_path, out_name, n_sim, n_boot, region):
+    """The worlds for one matrix and the data behind it; writes outputs/results/out_name."""
     fine, coarse = region["cell_size_deg"], BASELINE_CELL_SIZE
-    table = load_transitions(region, verbose=False)
-    product = np.load(os.path.join(PROCESSED_DIR, f"shrinkage_P_{fine:g}deg_tau{TAU_DAYS}d.npz"))
+    product = np.load(product_path)
     P_true, alpha = product["P"], float(product["alpha"])
     start, _, n_cells = to_states(table, region, fine)
     _, drifters = per_cell_counts(start, table["drifter_id"], n_cells)
@@ -135,15 +134,15 @@ if __name__ == "__main__":
     width = {k: np.zeros(S.shape[0]) for k in keys}
     valid = {k: np.zeros(S.shape[0]) for k in keys}
     bias_raw = {k: 0.0 for k in keys}  # whole-coast release only
-    for sim in range(args.n_sim):
+    for sim in range(n_sim):
         e_sim = simulate(P_true, start, blocks, rng)
         counts_sim = count_matrix(start, e_sim, n_cells + 1)
         est = numbers(fit(counts_sim), F0, S)
         raw = numbers(fit_raw(counts_sim), F0, S)
         for k in keys:
             bias_raw[k] += float(raw[k][-1] - truth[k][-1])
-        reps = {k: np.empty((args.n_boot, S.shape[0])) for k in keys}
-        for b, P_b in enumerate(replicate_matrices(start, e_sim, table["drifter_id"], n_cells + 1, fit, args.n_boot, SEED + sim + 1)):
+        reps = {k: np.empty((n_boot, S.shape[0])) for k in keys}
+        for b, P_b in enumerate(replicate_matrices(start, e_sim, table["drifter_id"], n_cells + 1, fit, n_boot, SEED + sim + 1)):
             out = numbers(P_b, F0, S)
             for k in keys:
                 reps[k][b] = out[k]
@@ -154,7 +153,7 @@ if __name__ == "__main__":
             bias[k][ok] += (est[k] - truth[k])[ok]
             width[k][ok] += (high - low)[ok]
             valid[k][ok] += 1
-        print(f"world {sim + 1} of {args.n_sim}: coast, 1-year % left: truth {truth[('pct_left_box', 24)][-1]:.3f}, "
+        print(f"world {sim + 1} of {n_sim}: coast, 1-year % left: truth {truth[('pct_left_box', 24)][-1]:.3f}, "
               f"estimate {est[('pct_left_box', 24)][-1]:.3f}; running coverage {100 * hits[('pct_left_box', 24)][-1] / (sim + 1):.0f}%", flush=True)
 
     rows = []
@@ -165,7 +164,7 @@ if __name__ == "__main__":
                      "pct_covered": round(100 * float(hits[(q, step)][c] / valid[(q, step)][c]), 1),
                      "mean_bias": round(float(bias[(q, step)][c] / valid[(q, step)][c]), 4), "truth": round(float(truth[(q, step)][c]), 4),
                      "mean_interval_width": round(float(width[(q, step)][c] / valid[(q, step)][c]), 4),
-                     "mean_bias_without_shrinkage": round(bias_raw[(q, step)] / args.n_sim, 4)})
+                     "mean_bias_without_shrinkage": round(bias_raw[(q, step)] / n_sim, 4)})
         for name, (lo, hi) in FLAGS.items():
             g = (drifters[sampled] >= lo) & (drifters[sampled] < hi)
             v = valid[(q, step)][:-1][g]
@@ -176,9 +175,25 @@ if __name__ == "__main__":
     for r in rows:
         print(r)
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    out = os.path.join(RESULTS_DIR, f"interval_coverage_tau{TAU_DAYS}d.csv")
+    out = os.path.join(RESULTS_DIR, out_name)
     with open(out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=rows[0].keys())
         writer.writeheader()
         writer.writerows(rows)
-    print(f"Saved {out} ({args.n_sim} worlds, {args.n_boot} replicates each)")
+    print(f"Saved {out} ({n_sim} worlds, {n_boot} replicates each)")
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
+    ap.add_argument("--n-sim", type=int, default=N_SIM, help="synthetic worlds (default %(default)s)")
+    ap.add_argument("--n-boot", type=int, default=N_BOOT_SIM, help="bootstrap replicates per world (default %(default)s)")
+    ap.add_argument("--drifters", choices=("all", "undrogued", "both"), default="both", help="which matrix (default %(default)s)")
+    args = ap.parse_args()
+    region = load_region_bounds()
+    moves = load_transitions(region, verbose=False)
+    if args.drifters in ("all", "both"):
+        run(moves, os.path.join(PROCESSED_DIR, f"shrinkage_P_{region['cell_size_deg']:g}deg_tau{TAU_DAYS}d.npz"),
+            f"interval_coverage_tau{TAU_DAYS}d.csv", args.n_sim, args.n_boot, region)
+    if args.drifters in ("undrogued", "both"):
+        run(undrogued_only(moves), os.path.join(PROCESSED_DIR, f"{UNDROGUED_STEM}.npz"),
+            f"interval_coverage_undrogued_tau{TAU_DAYS}d.csv", args.n_sim, args.n_boot, region)

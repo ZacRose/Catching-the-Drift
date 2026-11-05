@@ -183,7 +183,7 @@ def app_block(signal_all, signal_undrogued, signal_drogued, forecast):
             f"against {signal_drogued['djf_minus_jja']:+.0f} km for drifters that follow the water, whose range ({signal_drogued['djf_jja_low']:+.0f} to {signal_drogued['djf_jja_high']:+.0f} km) includes no difference.",
             f"This is a typical pattern, not a forecast for a particular date. Knowing the season cuts the typical error in a season's westward drift from {forecast['mae_annual_km']:.0f} km to "
             f"{forecast['mae_seasonal_km']:.0f} km, so one year can still differ a lot from the average.",
-            "The drift map pools all seasons. Starting in a different season moves the centre of the material by about 1° after 3 months, so the map is a fair guide whatever the season.",
+            "On the drift map you can release in any season, and the drift then changes as the seasons pass. Whole matrices need more data than one average, so the map's seasons are pulled towards the all-year drift, and show smaller gaps than this chart.",
         ],
     }
 

@@ -356,3 +356,39 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - The app in headless Chrome: the page's maths against Python, screenshots of both views at desktop and a true 390 px width, and no console errors on four views. Looking at the screenshots found double bullets, a clipped label and leftover controls in the first Seasons view, all fixed.
 - **One-off checks, not in the repo:** the 2 deg matrix test behind decision 16; the fixed start-cell weights for the offshore gap (+52 km, 36 to 75).
 - **Not done:** the cloud extract wasn't re-timed (it reads about 16 GB); literature wasn't checked; no decision was made on the team's behalf about their "to confirm" lists.
+
+## 2026-11-05 - The undrogued comparison and finishing the app (Claude Code)
+- **Asked (Zac):** on a new branch that keeps everything from the last one, for the team to review separately: (1) earlier we meant to compare all drifters with undrogued drifters only, from memory because undrogued drifters are a better analogue for oil; check whether it was done, and write the code if not; (2) the app: rename it South Atlantic Gyre Drift Explorer, add the undrogued / all toggle, add the seasonal analysis including what happens when a timeframe crosses seasons, and make it more rigorous and helpful, remembering that less is more.
+- **Read:** the plan's decisions 6, 6a, 13 and 16, `robustness.py`, `seasonal_robustness.py`, `seasonal_forecast.py`, the exporter, the page's code, and the outputs of the previous branch.
+- **Found:**
+  - The comparison was partly done. Week 8 reran the headline numbers by drifter type, but kept no matrix, had no fair interval on the gaps, and never tested whether the undrogued matrix predicts undrogued drifters better.
+  - The plan is more careful than Zac's memory, and the code follows it: undrogued drifters "arguably suit" floating material, on a handful of studies.
+  - The undrogued whole-coast ranges are too narrow, more so than the pooled ones (9-13% coverage for the centre's position at some horizons; plan, section 9). The gap between the sets is clear, but its range isn't a true 95%.
+  - Seasons barely move the map once shrunk enough to hold up in other years (at most 0.41 deg at a year), and keep only 34% (all) and 21% (undrogued) of the real summer-winter gap.
+- **Added (branch `week9-app-finalise`):**
+  - `src/inference/drogue_comparison.py`: the undrogued matrix and bootstrap, paired-draw gaps, the held-out test, calibration, a figure.
+  - `src/forecasting/seasonal_matrices.py`: seasonal matrices with beta chosen by leaving out whole years, the test of the crossing rule, a figure.
+  - `src/app/export_app_data.py`, `check_intervals.py`: both sets and the seasons, 16-bit intervals, "reached by then", brute-force checks of all of it.
+  - `src/inference/interval_coverage.py`: `--drifters`, restructured so both sets run the same way. `src/linalg/product.py`: `load_product(drifters=...)`, `forecast(season=...)`.
+  - The app: new title; step 3, "Under what conditions?"; the season strip; a comparison marker; "How far to trust this", "Reached by then", "Mostly in" and an Orange Basin start.
+  - `tests/test_drogue_season_week9.py` (22 tests), README, the plan's decisions 20-23 and section 9, and a corrected decision 16.
+- **AI's choices (for the team to confirm):** all drifters stays the main estimate and the page opens on it (decision 22); seasons shrunk to the all-year matrix, with beta from leaving out years (decision 20); each step uses the season it starts in, releases on a season's first day, a 360-day year (decision 21); 16-bit intervals, seasons at 200 replicates and 23 stored steps (decision 23); grounding chance kept all-year; what the page leaves out for clutter (exit edges, a prior-range display, more result rows, more overlays).
+- **Where the AI's advice was overruled:** the AI had advised against a season switch (decision 16). Zac asked for it. Building it showed the advice's evidence was mostly right, but also that the crossing rule could be properly tested, and it was one of the AI's numbers that was wrong (next point). Whether the switch earns its place is left to the team.
+- **Mistakes the AI made and corrected, for the critical reflection:**
+  - Decision 16 said a season would move the 3-month centre "about 1 deg". The real figure on the map's own matrix is at most 0.19 deg; the 1 deg came from a 4 deg release at alpha 20. An AI number was used as an argument without being checked on the right matrix.
+  - Run times estimated in the docstrings were far out (the interval check: 5 minutes estimated, 40 measured). All were replaced with measured ones.
+  - The first draft of the page's note on the simulation implied it covered seasonal ranges, which it doesn't; it now says "all-year 95% ranges". Also found by looking at the page: a hint too long, "Released" crowding its chips, and in the figures labels running over lines and past the panel edge.
+  - The interval check reported gaps up to 49% on the seasonal steps between stored ones. It was only understood by breaking the table down: the large ones are on numbers under 0.02%, and the median is 0.9% where the low end is at least 1%. It was not simply called rounding. Likewise the all-year 6.6e-4, larger than the 1.8e-4 rounding, was traced to values too small to show.
+- **Checked:**
+  - 138 tests pass, including the page against Python for both sets, models and seasons in headless Chrome.
+  - The coast release against the saved results, for both sets (largest difference 5e-5).
+  - `check_intervals.py`: the app's intervals against brute force on the same draws, on 704 all-year and 2,816 seasonal intervals.
+  - Rerunning `drogue_comparison` gave an identical CSV and matrix, and `interval_coverage --drifters all` gave the same table after being restructured. Every other existing output is unchanged except the app's data, its check and the Seasons text.
+  - The numbers in the plan and README were read back from the CSVs.
+- **One-off checks, not in the repo:**
+  - a two-scale prior with a 4 deg seasonal shift: test gain 0.00446 against 0.0041 (all), 0.00623 against 0.00566 (undrogued), so dropped (decision 20);
+  - the page's number against its shipped seasonal range, over every start, season, set, model, quantity and stored step: outside 8 times in about 1.2 million, allowing for rounding, never for a whole-coast release;
+  - which row gives the all-year 5.8e-4 gap: a value of 5.8e-7% stored as "too small", with every other row in that model within the 1.8e-4 rounding;
+  - which release cells have no moves in each season (5 of 9 in DJF; undrogued 5 of 8);
+  - every control clicked through on the real data in headless Chrome, including undrogued at the 3 cells with none, with no errors; screenshots at desktop and 390 px.
+- **Not done:** `src.run_all` wasn't run end to end again (each changed step was rerun in order, and its 1 hour 50 minutes is added up from them); the seasonal ranges have no known-truth simulation; the undrogued whole-coast ranges aren't corrected, only flagged; no literature was checked; nothing was pushed, and no decision was made for the team.

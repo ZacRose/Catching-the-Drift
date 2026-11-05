@@ -7,8 +7,9 @@ drifting buoys, as a transition matrix anyone can load and step forward, with it
 **DATA3001, Term 3 2026.** Isaac Rose, Zhiru Lin (computational); Vidisha Trivedi, Liam Lightfoot (quantitative);
 Keyao Huang (business). Client: Shane Elipot, University of Miami.
 
-**To see the results now:** open [`app/index.html`](app/index.html) in any browser. It needs no install, server
-or internet connection. Pick a start and a timeframe; the [app's README](app/README.md) has the details.
+**To see the results now:** open [`app/index.html`](app/index.html), the South Atlantic Gyre Drift Explorer, in any
+browser. It needs no install, server or internet connection. Pick a start and a timeframe, and if you like the drifters and
+the release season; the [app's README](app/README.md) has the details.
 
 ## What we found
 
@@ -47,16 +48,27 @@ Checked on drifters the model never saw:
   same amount of data from all years.
 
 **Wind matters most (RQ3).** Drogue status is the biggest single choice. Drifters that have lost their drogue are pushed
-by the wind: from the coast, material carried by them is about 10° further west after a year (27.0°W against 16.8°W) and
-7–8 times as likely to have left the box (6.8% against 0.89%). The main estimate pools both, so it sits between "water"
-and "floating material". Say which one you need.
+by the wind: from the coast, material carried by them is about 10° further west after a year (27.0°W against 16.8°W; gap 10.2°,
+9.1–11.3) and 7–8 times as likely to have left the box (6.8%, 3.9–10.9, against 0.89%). The main estimate pools both, so it sits
+between "water" and "floating material". Say which one you need. The undrogued matrix is saved too, and on held-out undrogued
+drifters it predicts no better than the pooled one at 15 days, but better at 3 months and a year, and its 90% line holds
+what it should at a year (90%, against 85% for the pooled one). The coast's undrogued ranges are too narrow, more so than the pooled
+ones: in a known-truth simulation the longitude range after a year held the truth 13% of the time (biased 1.3° east), so the gap is
+clear but its range is a guide only. Undrogued drifters stand in for oil or debris on the strength of a handful of studies, and
+nothing here weathers or evaporates.
 
 **Seasons (RQ4).** Westward drift from the Benguela zone is seasonal: about 120 km per 15 days in summer and spring, about
 70 km in winter, and summer beat winter in all 8 years with enough drifters to compare. It survives every other check we
 made, but it is mainly in the wind-exposed drifters (+83 km between summer and winter, against +24 km, -4 to +47, for
 drifters that follow the water). Knowing the season cuts the typical error in a season's drift from 33 km to 26 km (21.5%
 better, interval -0.4% to 39.8%), but one year can still differ a lot from the average, so we offer no validated seasonal
-forecast or risk window. The gain from a seasonal matrix is real but about 0.3% per move, so the map pools all seasons.
+forecast or risk window.
+
+The map can release in any season. A chain has to change matrix as the seasons pass: on held-out drifters in other years this
+beats ignoring the season at every horizon tried, while keeping the release season's matrix throughout is worse than ignoring it
+from about 6 months. The gain is real but small, about 0.4% per move, and a season's matrix keeps only about a third of the raw gap
+in westward drift (the rest doesn't hold up from year to year, at this level of detail). So the seasons change the map little: the
+centre after a year moves by 0.4° at most.
 
 ## How far to trust the intervals
 
@@ -80,6 +92,9 @@ dist = prod.forecast(lat=-29.0, lon=13.0, days=90)   # a distribution over cells
 prod.summary(dist)                                   # % left the box, centre, the most likely cells
 prod.se, prod.ci_low, prod.ci_high                   # uncertainty for every entry of P
 prod.start_drifters                                  # how much data is behind each row: check it
+
+wind = load_product(drifters="undrogued")            # the same fit on moves that start without a drogue
+prod.forecast(lat=-29.0, lon=13.0, days=360, season="DJF")   # released on the first day of a season, changing with the seasons
 ```
 
 The matrices are plain `.npz` files in `data/processed/`, so `numpy.load` is all another language needs. States are grid
@@ -94,8 +109,8 @@ python3 -m src.run_all --from-tables     # everything from the committed tables,
 python3 -m src.run_all                   # everything from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
 ```
 
-Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the order; the whole run takes about 35
-minutes on a 10-core laptop once the cloud data is cached. Every script also runs alone, and its docstring says what it needs and makes. The raw data are never changed: the GDP is read from
+Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the order; the whole run takes about 1 hour
+50 minutes on a 10-core laptop once the cloud data is cached (the app's export and interval check are about an hour of that). Every script also runs alone, and its docstring says what it needs and makes. The raw data are never changed: the GDP is read from
 the cloud with [clouddrift](https://github.com/Cloud-Drift/clouddrift) and region R is cached in `data/interim/` (not in git).
 
 To use another region, change the box in `config/region.yaml` (with its coastal zone and subregions) and rerun.
@@ -112,12 +127,12 @@ To use another region, change the box in `config/region.yaml` (with its coastal 
 | RQ1: where it gathers | `src/linalg/long_run.py` | `long_run_*` |
 | RQ2: which estimator | `src/inference/evaluate.py`, `score_intervals.py`, `prior_sensitivity.py` | `evaluation_*`, `score_intervals*`, `prior_sensitivity*` |
 | Reliability | `src/inference/bootstrap.py`, `calibration.py`, `year_intervals.py`, `interval_coverage.py`, `markov_check.py` | `calibration*`, `year_intervals_*`, `interval_coverage_*`, `markov_check*` |
-| RQ3 and other choices | `src/inference/robustness.py`, `region_swap.py` | `robustness*`, `region_swap*` |
-| RQ4: seasons | `src/forecasting/seasonal_forecast.py`, `seasonal_robustness.py` | `seasonal_*` |
+| RQ3 and other choices | `src/inference/drogue_comparison.py`, `robustness.py`, `region_swap.py` | `drogue_comparison*`, `robustness*`, `region_swap*` |
+| RQ4: seasons | `src/forecasting/seasonal_forecast.py`, `seasonal_robustness.py`, `seasonal_matrices.py` | `seasonal_*` |
 | The app | `src/app/`, `app/` | `app/index.html`, `app_interval_check.csv` |
 
 [`project_plan.txt`](project_plan.txt) is the running record: what was done each week, the decision log (section 7) and the
-forensic review of the whole project (section 8). [`logs/ai_use_log.md`](logs/ai_use_log.md) records how AI was used and what
+forensic review of the whole project (section 8), and the undrogued comparison and finishing the app (section 9). [`logs/ai_use_log.md`](logs/ai_use_log.md) records how AI was used and what
 was checked. [`docs/proposal/`](docs/proposal/) has the submitted proposal.
 
 ## Limitations
@@ -129,7 +144,7 @@ was checked. [`docs/proposal/`](docs/proposal/) has the submitted proposal.
 - **Grounding isn't in the main matrix**, because grounded drifters stop reporting, so coastal numbers are lower bounds. The
   app's Groundings switch adds it as a second model.
 - **Drifters seldom come close to shore.** A coastal cell is about 200 km across and the 9 sampled ones have 2–71 drifters each.
-- **Data end in October 2022**, and all years and seasons are pooled.
+- **Data end in October 2022**, and the main estimate pools all years and seasons.
 
 ## Data and credit
 

@@ -394,6 +394,7 @@ def test_every_step_of_the_pipeline_is_a_real_module_in_a_workable_order():
                           ("src.inference.bootstrap", "src.linalg.coastal_release"), ("src.gridding.lags", "src.inference.markov_check"),
                           ("src.inference.data_forensics", "src.linalg.connectivity"), ("src.linalg.long_run", "src.inference.year_intervals"),
                           ("src.inference.calibration", "src.app.export_app_data"), ("src.forecasting.seasonal_robustness", "src.app.export_app_data"),
-                          ("src.app.export_app_data", "src.app.check_intervals")):
+                          ("src.inference.drogue_comparison", "src.forecasting.seasonal_matrices"), ("src.forecasting.seasonal_matrices", "src.app.export_app_data"),
+                          ("src.inference.drogue_comparison", "src.inference.interval_coverage"), ("src.app.export_app_data", "src.app.check_intervals")):
         assert order.index(before) < order.index(after), (before, after)
     assert set(steps(from_tables=True)) < set(order)

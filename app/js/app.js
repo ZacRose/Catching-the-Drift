@@ -5,21 +5,28 @@
 // drift once; after the first run, changing the start or the timeframe runs it again. The results
 // panel slides in beside the map when the drift has finished. "Loop" replays it until switched off.
 // "Groundings" switches to the model in which material can also run aground, shown along the coast.
+// Step 3 chooses the drifters behind the matrix and the release season. A run in a season changes matrix as the
+// seasons pass, shown on the timeline; any run other than all drifters, all year also keeps that one to compare with.
 (function () {
   "use strict";
 
   const D = window.DRIFT_DATA;
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
-  if (!D || !window.DriftModel || !D.intervals || !D.intervals.shore) {
+  if (!D || !window.DriftModel || !D.sets || !D.sets.all || !D.sets.undrogued) {
     document.body.classList.add("no-data");
     $("#fatal").hidden = false;
     return;
   }
 
   const { Model, bearingDeg, compass } = window.DriftModel;
-  const MODELS = { water: new Model(D, "water"), shore: new Model(D, "shore") };
-  let M = MODELS.water; // the model in use; both share the grid
+  const MODELS = new Map(); // built when first used; all share the grid
+  const modelFor = (variant, drifters) => {
+    const key = `${variant}:${drifters}`;
+    if (!MODELS.has(key)) MODELS.set(key, new Model(D, variant, drifters));
+    return MODELS.get(key);
+  };
+  let M = modelFor("water", "all"); // the model in use
   const TAU = M.tau;
   const LEVELS = [0.5, 0.9];
   const REDUCE_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -49,6 +56,12 @@
     { min: 1, cls: "thin", label: "Very thin data", short: "very thin", range: "under 10", rgba: [251, 113, 133, 0.45] },
   ];
   const flagOf = (n) => FLAGS.find((f) => n >= f.min) || null;
+  const SETS = {
+    all: { label: "All drifters", hint: "The main estimate, pooling drifters with and without a drogue." },
+    undrogued: { label: "Undrogued only", hint: "Drifters that lost their drogue, pushed directly by the wind: nearer to oil or debris than to the water." },
+  };
+  const SEASON_NAMES = D.seasons.names;
+  const SEASON_DAYS = ["1 December", "1 March", "1 June", "1 September"];
 
   // ---------- formatting ----------
   const num = (v) => (v >= 99.95 ? "100" : v >= 1 ? v.toFixed(1) : v < 0.001 ? "<0.001" : `${+v.toPrecision(2)}`);
@@ -82,13 +95,19 @@
   const rowsFor = (ground) => ["centre_km", "pct_left_box", ...(ground ? ["pct_aground"] : []), "pct_in_benguela", "pct_in_coastal_zone"];
 
   const coastStart = () => ({ kind: "coast", name: "Whole Benguela coast" });
-  const cellStart = (cell) => ({ kind: "cell", cell, name: `${fmtLat(M.latC[cell])}, ${fmtLon(M.lonC[cell])}` });
+  const NAMED = D.named.filter((n) => n.cells.length === 1); // releases one square wide can be picked as a start
+  const cellStart = (cell) => {
+    const named = NAMED.find((n) => n.cells[0] === cell);
+    return { kind: "cell", cell, name: named ? named.name : `${fmtLat(M.latC[cell])}, ${fmtLon(M.lonC[cell])}` };
+  };
   const startKey = (s) => (s.kind === "coast" ? "coast" : `cell:${s.cell}`);
 
   const state = {
     view: "explore",
     start: coastStart(),
     steps: 6,
+    drifters: "all",
+    season: null, // null is all year; otherwise an index into D.seasons
     t: 0,
     playing: false,
     loop: false,
@@ -297,7 +316,7 @@
     return p;
   }
 
-  const blend = new Float64Array(Math.max(MODELS.water.nStates, MODELS.shore.nStates));
+  const blend = new Float64Array(M.nCells + 1 + D.shore.cells.length);
   function currentDist() {
     if (!R) return null;
     const k = clamp(Math.floor(state.t), 0, R.steps), f = state.t - k;
@@ -432,6 +451,21 @@
       }
       // the centre of the material in the water and the path it has taken
       const k = clamp(Math.floor(state.t), 0, R.steps), f = state.t - k;
+      if (R.compare) { // the same start with all drifters, all year: a faint path and a hollow diamond
+        const at = (s, key) => R.compare[s][key];
+        const bx = X(k < R.steps ? lerp(at(k, "centre_lon"), at(k + 1, "centre_lon"), f) : at(k, "centre_lon"));
+        const by = Y(k < R.steps ? lerp(at(k, "centre_lat"), at(k + 1, "centre_lat"), f) : at(k, "centre_lat"));
+        c.save();
+        c.beginPath();
+        for (let s = 0; s <= k; s++) { const st = R.compare[s]; s ? c.lineTo(X(st.centre_lon), Y(st.centre_lat)) : c.moveTo(X(st.centre_lon), Y(st.centre_lat)); }
+        c.lineTo(bx, by);
+        c.setLineDash([2, 4]); c.lineWidth = 1.3; c.strokeStyle = "rgba(255,255,255,0.45)"; c.stroke();
+        c.setLineDash([]);
+        c.translate(bx, by); c.rotate(Math.PI / 4);
+        c.fillStyle = "rgba(10,37,64,0.65)"; c.fillRect(-4.5, -4.5, 9, 9);
+        c.strokeStyle = "rgba(255,255,255,0.9)"; c.lineWidth = 1.4; c.strokeRect(-4.5, -4.5, 9, 9);
+        c.restore();
+      }
       c.save();
       c.beginPath();
       for (let s = 0; s <= k; s++) { const st = R.stats[s]; s ? c.lineTo(X(st.centre_lon), Y(st.centre_lat)) : c.moveTo(X(st.centre_lon), Y(st.centre_lat)); }
@@ -473,7 +507,7 @@
   function renderLegend() {
     const L = $("#legend");
     if (state.layers.coverage) {
-      L.innerHTML = `<div class="lg-group"><span class="lg-title">Drifters that started a 15-day move in each 2° square</span>
+      L.innerHTML = `<div class="lg-group"><span class="lg-title">${state.drifters === "undrogued" ? "Undrogued drifters" : "Drifters"} that started a 15-day move in each 2° square</span>
         <span class="lg-bins">${[...FLAGS].reverse().map((f) => `<span><i style="background:${css(f.rgba, 0.9)}"></i>${f.range} ${f.short}</span>`).join("")}</span></div>`;
       return;
     }
@@ -483,6 +517,7 @@
     const keys = R ? `<div class="lg-group lg-keys">
         ${state.layers.areas ? `<span>${keyLine(false, "#ffffff", 2.4)}50% chance it's inside</span><span>${keyLine(true, "#ffffff", 1.8)}90% chance it's inside</span>` : ""}
         <span><svg viewBox="0 0 26 12" aria-hidden="true"><rect x="9" y="2" width="8" height="8" transform="rotate(45 13 6)" fill="#fff" stroke="#0a2540"/></svg>Centre and its path</span>
+        ${R.compare ? `<span><svg viewBox="0 0 26 12" aria-hidden="true"><rect x="9" y="2" width="8" height="8" transform="rotate(45 13 6)" fill="#0a2540" stroke="#fff"/></svg>All drifters, all year</span>` : ""}
       </div>` : "";
     L.innerHTML = `<div class="lg-group"><span class="lg-title">${state.layers.ground ? "Still in the water: chance" : "Chance it's"} in each 2° square (about 200 km across)</span>
       <span class="lg-bins">${bins}</span></div>${shore}${keys}`;
@@ -498,24 +533,27 @@
       where = `${n.length} coastal squares, ${fmtDeg(M.benguela.lat_min, "lat")}–${fmtDeg(M.benguela.lat_max, "lat")} · ${n[0]}–${n[n.length - 1]} drifters each, ${n.filter((v) => v < 10).length} under 10`;
     } else {
       const b = M.cellBounds(s.cell), n = M.drifters[s.cell];
-      flag = flagOf(n);
-      where = `2° square ${fmtDeg(b.lat0, "lat")}–${fmtDeg(b.lat1, "lat")}, ${fmtDeg(b.lon0, "lon")}–${fmtDeg(b.lon1, "lon")} · ${n} drifter${n === 1 ? "" : "s"}`;
+      flag = flagOf(n) || { cls: "thin", label: "No drifters here" };
+      where = `2° square ${fmtDeg(b.lat0, "lat")}–${fmtDeg(b.lat1, "lat")}, ${fmtDeg(b.lon0, "lon")}–${fmtDeg(b.lon1, "lon")} · ${n} ${state.drifters === "undrogued" ? "undrogued " : ""}drifter${n === 1 ? "" : "s"}`;
     }
-    const coastLink = s.kind !== "coast" ? `<button type="button" class="ss-coast" id="useCoast">Release along the whole Benguela coast instead</button>` : "";
+    const presets = [...(s.kind !== "coast" ? [["coast", "Whole Benguela coast"]] : []),
+      ...NAMED.filter((n) => s.cell !== n.cells[0]).map((n) => [n.cells[0], n.name])];
     $("#startSummary").innerHTML = `
       <div class="ss-top"><span class="ss-name">${s.name}</span><span class="badge flag-${flag.cls}">${flag.label}</span></div>
-      <div class="ss-where">${where}</div>${coastLink}
-      <div class="flag-key"><span>Data flag, by drifters that started here:</span>
+      <div class="ss-where">${where}</div>
+      <div class="ss-presets"><span>Or start from:</span>${presets.map(([key, label]) => `<button type="button" class="ss-coast" data-start="${key}">${label}</button>`).join("")}</div>
+      <div class="flag-key"><span>Data flag, by ${state.drifters === "undrogued" ? "undrogued " : ""}drifters that started here:</span>
         <ul>${FLAGS.map((f) => `<li class="${f.cls}${f === flag ? " on" : ""}"><i></i>${f.range} ${f.short}</li>`).join("")}</ul></div>`;
-    const btn = $("#useCoast");
-    if (btn) btn.onclick = () => setStart(coastStart());
+    $$("#startSummary .ss-coast").forEach((b) => {
+      b.onclick = () => setStart(b.dataset.start === "coast" ? coastStart() : cellStart(+b.dataset.start));
+    });
   }
 
   // ---------- results ----------
   function spark(q, step) {
     const W = 56, H = 28, n = R.steps;
     const est = R.stats.map((s) => s[q]);
-    const ivs = est.map((_, s) => M.interval(R.start, q, s));
+    const ivs = est.map((_, s) => M.interval(R.start, q, s, R.season));
     const top = Math.max(...est, ...ivs.map((v) => (v ? v[1] : 0))) || 1;
     const x = (s) => (W * s) / n, y = (v) => H - 2 - ((H - 4) * v) / top;
     const line = est.map((v, s) => `${s ? "L" : "M"}${x(s).toFixed(1)},${y(v).toFixed(1)}`).join("");
@@ -525,20 +563,57 @@
     return `<svg class="ch-spark" viewBox="0 0 ${W} ${H}" aria-hidden="true"><path class="band" d="${up}${down}Z" fill="${c}"/>
       <path class="line" d="${line}" stroke="${c}"/><circle cx="${x(step)}" cy="${y(est[step])}" r="3" fill="${c}" stroke="#0b1f33" stroke-width="1.5"/></svg>`;
   }
+  // The named areas holding most of the material, for the line under the headline (RQ1; connectivity.py).
+  function mostlyIn(dist) {
+    const top = M.subregionShares(dist).map((v, k) => [D.subregions.names[k], v]).sort((a, b) => b[1] - a[1]).filter(([, v]) => v >= 10).slice(0, 2);
+    return top.length ? `Mostly in: ${top.map(([name, v]) => `${name} ${v.toFixed(0)}%`).join(", ")}.` : "";
+  }
+  // What the checks say about this answer: the start, the timeframe and the conditions decide which apply.
+  function trustNotes(step) {
+    const Q = D.meta.checks || {}, und = R.drifters === "undrogued", U = Q.undrogued || {}, days = step * TAU, out = [];
+    const cov = und ? U.coverage : Q.coverage, line = und ? U.line_90 : Q.line_90, left = und ? U.left_box : Q.left_box;
+    const n = R.start.kind === "coast" ? null : M.drifters[R.start.cell], ranges = R.season === null ? "95% ranges" : "all-year 95% ranges";
+    if (n === 0) out.push("No undrogued drifter started here, so this comes from its 4° area, and has no 95% range.");
+    else if (cov && R.start.kind === "coast") out.push(`These ranges are too narrow: in a simulation with a known truth, ${ranges} from the whole coast held it only about ${cov[3]}% of the time.`);
+    else if (cov) out.push(`In a simulation with a known truth, ${ranges} from a start with this much data held it about ${cov[n >= 100 ? 0 : n >= 10 ? 1 : 2]}% of the time.`);
+    if (days >= 90 && line && left) {
+      const year = days >= 270;
+      out.push(`On ${und ? "undrogued " : ""}drifters it never saw, the 90% line held ${line[year ? 2 : 1]}% after ${year ? "a year" : "3 months"}, and the chance of having left ran high: ${left[year ? 1 : 0]}.`);
+    }
+    if (R.season !== null) {
+      const kept = Q.seasons && Q.seasons.kept ? Q.seasons.kept[R.drifters] : null;
+      out.push(`A typical year's pattern, not a forecast.${kept ? ` To hold up in other years, the seasons are pulled towards the all-year drift: they keep about ${kept}% of the real gap in westward drift between summer and winter, so differences here are understated.` : ""}`);
+    }
+    else if (und) out.push("A stand-in for wind-exposed material, not an oil model: nothing here weathers or evaporates.");
+    else if (days >= 180 && Q.year_width) out.push(`The ranges leave out change from year to year, which makes the centre's longitude range about ${Q.year_width} times as wide.`);
+    return out;
+  }
   function renderResults(step) {
     const st = R.stats[step], days = step * TAU, o = M.startPoint(R.start);
     const dir = st.centre_km > 30 ? compass(bearingDeg(o.lat, o.lon, st.centre_lat, st.centre_lon)) : null;
+    const started = R.start.kind === "coast" || M.isCoastal[R.start.cell];
     const rows = rowsFor(R.ground).map((q) => {
-      const Q = QUANT[q], iv = M.interval(R.start, q, step), v = st[q];
+      const Q = QUANT[q], iv = M.interval(R.start, q, step, R.season), v = st[q];
       const value = Q.unit === "km" ? fmtKm(v) : fmtPct(v);
       const range = !iv ? "" : Q.unit === "km" ? `${km10(iv[0])}–${km10(iv[1])} km` : iv[1] < 0.001 ? "under 0.001%" : `${num(iv[0])}–${num(iv[1])}%`;
-      return `<li data-hl="${Q.highlight}"><div><div class="ch-label"><i style="background:${Q.color}"></i>${Q.label}</div><div class="ch-desc">${Q.desc}</div></div>
+      let desc = Q.desc;
+      if (q === "pct_in_coastal_zone" && !started) { // being there today is not the same as having got there
+        const r = M.interval(R.start, "pct_reached_coast", step, R.season);
+        desc = `Reached by then: ${R.ground ? "" : "at least "}${fmtPct(st.pct_reached_coast)}${r ? ` (${num(r[0])}–${num(r[1])}%)` : ""}`;
+      }
+      return `<li data-hl="${Q.highlight}"><div><div class="ch-label"><i style="background:${Q.color}"></i>${Q.label}</div><div class="ch-desc">${desc}</div></div>
         ${spark(q, step)}<div class="ch-num"><div class="ch-val">${value}</div><div class="ch-rng">${range}</div></div></li>`;
     }).join("");
-    $("#results").innerHTML = `<p class="eyebrow">After ${days} days${days >= 30 ? ` · ${humanDays(days)}` : ""}</p>
+    const conditions = [R.drifters === "undrogued" ? "Undrogued drifters" : "",
+      R.season !== null ? `Released in ${SEASON_NAMES[R.season].toLowerCase()}, now ${SEASON_NAMES[M.seasonAt(R.season, step)].toLowerCase()}` : ""].filter(Boolean);
+    const base = R.compare ? R.compare[step] : null;
+    const notes = trustNotes(step);
+    $("#results").innerHTML = `<p class="eyebrow">After ${days} days${days >= 30 ? ` · ${humanDays(days)}` : ""}${conditions.map((c) => ` · ${c}`).join("")}</p>
       <h3>${R.ground ? "Still afloat, most" : "Most"} likely around ${fmtLat(st.centre_lat)}, ${fmtLon(st.centre_lon)}</h3>
-      <p class="where">${dir ? `${cap(dir)} of the start` : "Close to the start"}, marked ◆ on the map.</p>
+      <p class="where"><span>${dir ? `${cap(dir)} of the start` : "Close to the start"}, marked ◆ on the map. ${mostlyIn(R.dists[step])}</span>
+        ${base ? `<span class="baseline">With all drifters, all year (◇): around ${fmtLat(base.centre_lat)}, ${fmtLon(base.centre_lon)}, and ${fmtPct(base.pct_left_box)} has left.</span>` : ""}</p>
       <ul class="chances">${rows}</ul>
+      ${notes.length ? `<div class="trust"><b>How far to trust this</b><ul>${notes.map((n) => `<li>${n}</li>`).join("")}</ul></div>` : ""}
       <p class="foot">Small charts: release to day ${R.steps * TAU}. Grey numbers: 95% ranges, how much each answer could shift with a
         different sample of drifters. Point at a row to see it on the map.</p>`;
     $$("#results .chances li").forEach((li) => {
@@ -589,6 +664,9 @@
     const has = !!R, ended = has && !state.playing && state.t >= R.steps;
     $("#dayCounter").hidden = !has;
     $("#dayNum").textContent = Math.round(state.t * TAU);
+    const season = $("#daySeason");
+    season.hidden = !has || R.season === null;
+    if (!season.hidden) season.textContent = SEASON_NAMES[M.seasonAt(R.season, Math.floor(state.t))];
     const scrub = $("#scrub"), pb = $("#playBtn");
     scrub.disabled = pb.disabled = !has;
     if (document.activeElement !== scrub) scrub.value = state.t;
@@ -602,6 +680,19 @@
     $("#scrubTicks").innerHTML = stepTicks(n, map.w < 560 ? 3 : 6).map((s) => `<span style="left:${(100 * s) / n}%">${s ? `${s * TAU} d` : "Release"}</span>`).join("");
     $("#scrub").max = n;
     $("#dayOf").textContent = `of ${n * TAU}`;
+    renderSeasonStrip();
+  }
+  // Which matrix each stretch of the run uses, under the timeline.
+  function renderSeasonStrip() {
+    const el = $("#scrubSeasons"), n = R.steps, per = M.perSeason;
+    el.hidden = R.season === null;
+    if (el.hidden) return;
+    let html = "";
+    for (let s = 0; s < n; s += per) {
+      const width = (100 * Math.min(per, n - s)) / n;
+      html += `<span style="left:${(100 * s) / n}%;width:${width}%">${width >= 6 ? SEASON_NAMES[M.seasonAt(R.season, s)] : ""}</span>`;
+    }
+    el.innerHTML = html;
   }
   function play(fromStart) {
     clearTimeout(loopTimer);
@@ -618,9 +709,16 @@
 
   // ---------- running ----------
   function compute() {
-    M = state.layers.ground ? MODELS.shore : MODELS.water;
-    const start = state.start, dists = M.propagate(M.startVector(start), state.steps);
-    return { start, steps: state.steps, ground: state.layers.ground, dists, stats: dists.map((d) => M.stats(d, start)),
+    M = modelFor(state.layers.ground ? "shore" : "water", state.drifters);
+    const start = state.start, season = state.season, x0 = M.startVector(start);
+    const dists = M.propagate(x0, state.steps, season), reached = M.reachedCoast(x0, state.steps, season);
+    let compare = null;
+    if (state.drifters !== "all" || season !== null) { // the same start with the main estimate, to compare with
+      const B = modelFor(M.variant, "all");
+      compare = B.propagate(B.startVector(start), state.steps).map((d) => B.stats(d, start));
+    }
+    return { start, steps: state.steps, ground: state.layers.ground, drifters: state.drifters, season, dists,
+      stats: dists.map((d, s) => Object.assign(M.stats(d, start), { pct_reached_coast: reached[s] })), compare,
       areas: new Map(), contours: new Map(), finished: false, revealed: false };
   }
   function run() {
@@ -635,12 +733,27 @@
   }
   // Switching models keeps the run where it is (same start, timeframe and moment), without replaying.
   function rerunInPlace() {
-    if (!R) { M = state.layers.ground ? MODELS.shore : MODELS.water; return; }
+    if (!R) { M = modelFor(state.layers.ground ? "shore" : "water", state.drifters); return; }
     const keep = { t: Math.min(state.t, state.steps), finished: R.finished, revealed: R.revealed };
     R = Object.assign(compute(), { finished: keep.finished, revealed: keep.revealed });
     state.t = keep.t;
+    renderSeasonStrip();
     syncResults(true);
     writeHash();
+  }
+
+  function renderConditions() {
+    $$("#setChips .chip").forEach((b) => { const on = b.dataset.set === state.drifters; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    $$("#seasonChips .chip").forEach((b) => { const on = b.dataset.season === String(state.season); b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+    const s = state.season;
+    $("#condHint").textContent = `${SETS[state.drifters].hint}${s === null ? "" : ` Released ${SEASON_DAYS[s]}; the drift changes every ${M.perSeason * TAU} days as the seasons pass.`}`;
+  }
+  function setCondition(key, value) {
+    state[key] = value;
+    renderConditions();
+    rerunInPlace();
+    renderStart(); renderLegend();
+    dirty = true;
   }
 
   function setStart(start) {
@@ -726,7 +839,13 @@
       <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${F.quantity || "Forecast"}">${g}${xl}${paths}</svg></div>
       <div class="keys">${series.map((s, i) => `<span>${keyLine(s.kind === "forecast" || s.dashed, colours[i % colours.length], 2.4)}${s.label}</span>`).join("")}</div>
       ${F.quantity ? `<p class="fine">${F.quantity}${F.unit ? ` (${F.unit})` : ""}</p>` : ""}
-      ${(F.notes || []).length ? `<ul class="fine">${F.notes.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}`;
+      ${(F.notes || []).length ? `<ul class="fine">${F.notes.map((n) => `<li>${n}</li>`).join("")}</ul>` : ""}
+      <button type="button" class="ghost-btn" id="trySeason">Step through the seasons on the map</button>`;
+    $("#trySeason").onclick = () => { // a year from the chosen season, so it runs through all four
+      setView("explore");
+      setCondition("season", state.season === null ? 0 : state.season);
+      setSteps(24, true);
+    };
   }
 
   // ---------- map interaction ----------
@@ -749,8 +868,8 @@
     tip.innerHTML = `<b>${fmtLat(M.latC[cell])}, ${fmtLon(M.lonC[cell])}</b>
       ${showing ? `<div class="tt-row"><span>Chance it's ${R.ground ? "afloat " : ""}here on day ${step * TAU}</span><span>${fmtPct(100 * R.dists[step][cell])}</span></div>` : ""}
       ${showing && R.ground && k !== undefined ? `<div class="tt-row"><span>Chance it has run aground on this coast</span><span>${fmtPct(100 * R.dists[step][M.SHORE0 + k])}</span></div>` : ""}
-      <div class="tt-row"><span>Drifters that started here</span><span>${n}${flag ? ` · ${flag.short}` : ""}</span></div>
-      ${n === 0 ? `<div class="tt-no">No drifter started a move here (land or never sampled).</div>` : `<div class="tt-act">Click to start here</div>`}`;
+      <div class="tt-row"><span>${state.drifters === "undrogued" ? "Undrogued drifters" : "Drifters"} that started here</span><span>${n}${flag ? ` · ${flag.short}` : ""}</span></div>
+      ${n === 0 ? `<div class="tt-no">No ${state.drifters === "undrogued" ? "undrogued " : ""}drifter started a move here${state.drifters === "undrogued" ? "" : " (land or never sampled)"}.</div>` : `<div class="tt-act">Click to start here</div>`}`;
     const tw = tip.offsetWidth, th = tip.offsetHeight;
     tip.style.left = `${clamp(x + 16, 8, map.w - tw - 8)}px`;
     tip.style.top = `${clamp(y + 16 + th > map.h ? y - th - 12 : y + 16, 8, map.h - th - 8)}px`;
@@ -759,7 +878,9 @@
   canvases.fx.addEventListener("pointerleave", () => { state.hover = -1; dirty = true; tip.classList.remove("show"); });
   function tryStart(cell) {
     if (cell < 0) return toast("That's outside the study area, where the model has no data.");
-    if (M.drifters[cell] === 0) return toast("No drifter ever started a move in that square (land or never sampled). Try a nearby ocean square.");
+    if (M.drifters[cell] === 0) return toast(state.drifters === "undrogued" && modelFor("water", "all").drifters[cell] > 0
+      ? "No undrogued drifter started a move in that square. Try a nearby one, or all drifters."
+      : "No drifter ever started a move in that square (land or never sampled). Try a nearby ocean square.");
     setStart(cellStart(cell));
   }
   canvases.fx.addEventListener("click", (e) => { if (state.view === "explore") tryStart(cellAtEvent(e).cell); });
@@ -795,26 +916,29 @@
     toastTimer = setTimeout(() => (t.hidden = true), 4200);
   }
 
-  // ---------- shareable links: #start=cell:103&days=90&ground=1 ----------
+  // ---------- shareable links: #start=cell:103&days=90&ground=1&drifters=undrogued&season=DJF ----------
   function writeHash() {
     const h = state.view === "forecast" ? "view=forecast"
-      : `start=${startKey(state.start)}&days=${state.steps * TAU}${state.layers.ground ? "&ground=1" : ""}`;
+      : `start=${startKey(state.start)}&days=${state.steps * TAU}${state.layers.ground ? "&ground=1" : ""}${state.drifters === "all" ? "" : `&drifters=${state.drifters}`}${state.season === null ? "" : `&season=${D.seasons.codes[state.season]}`}`;
     try { history.replaceState(null, "", `#${h}`); } catch (e) { /* some browsers block this on file:// pages */ }
   }
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     const out = { view: p.get("view") === "forecast" ? "forecast" : "explore", ground: p.get("ground") === "1" };
+    if (p.get("drifters") === "undrogued") out.drifters = "undrogued";
+    const season = D.seasons.codes.indexOf(p.get("season"));
+    if (season >= 0) out.season = season;
     const days = +p.get("days");
     if (days > 0) out.steps = clamp(Math.round(days / TAU), 1, M.maxSteps);
     const s = p.get("start") || "";
     if (s === "coast") out.start = coastStart();
-    else if (/^cell:\d+$/.test(s) && M.drifters[+s.slice(5)] > 0) out.start = cellStart(+s.slice(5));
+    else if (/^cell:\d+$/.test(s) && modelFor("water", out.drifters || "all").drifters[+s.slice(5)] > 0) out.start = cellStart(+s.slice(5));
     return out;
   }
 
   // ---------- "How to read this" ----------
   function renderInfo() {
-    const m = D.meta, Q = m.checks || {};
+    const m = D.meta, Q = m.checks || {}, A = D.sets.all, U = D.sets.undrogued, UQ = Q.undrogued || {};
     const cal = Q.line_90 || ["about 90", "about 90", "about 85"], ex = Q.left_box || ["somewhat", "somewhat"], yr = Q.year_width || "1.5", c1 = Q.cell_1y || ["1", "1"], cov = Q.coverage;
     $("#infoBody").innerHTML = `
       <h3>Using it</h3>
@@ -831,34 +955,52 @@
         <li>The white diamond is the centre of the material, and the dotted line is the path it has taken.</li>
         <li><b>Groundings</b> adds the chance of running aground: the coastline turns pink where material has come ashore, brighter where more of it has.</li>
         <li><b>Data coverage</b> colours each square by its data flag (below).</li>
+        <li>With other conditions chosen, the hollow diamond and fainter dots show the same start with all drifters, all year.</li>
+      </ul>
+      <h3>Drifters: all, or undrogued only</h3>
+      <ul>
+        <li><b>All drifters</b> is the main estimate, and what the report quotes. It pools drifters with and without a drogue, a sea anchor that makes a drifter follow the water.</li>
+        <li><b>Undrogued only</b> uses the ${U.n_drifters.toLocaleString("en")} drifters' ${U.n_moves.toLocaleString("en")} moves made after losing the drogue. The wind pushes these directly, so they are arguably nearer to oil or debris (a handful of studies, not a settled result).
+          It is no oil model: nothing here weathers, evaporates or sinks.</li>
+        ${UQ.score ? `<li>${UQ.score}</li>` : ""}
+      </ul>
+      <h3>Seasons</h3>
+      <ul>
+        <li>Choose a season and the material is released on its first day: 1 December for summer, 1 March for autumn, 1 June for winter, 1 September for spring (southern hemisphere).</li>
+        <li><b>Crossing seasons:</b> each 15-day step uses the matrix of the season it starts in, changing every ${M.perSeason * TAU} days as the timeline shows. A year released in summer runs summer, autumn, winter, spring.</li>
+        ${Q.seasons ? `<li>${Q.seasons.detail}</li>` : ""}
+        <li>A season's squares rest on about a quarter of the data, so each is pulled towards its all-year row, which also pulls the seasons together. The ranges use ${m.n_boot_season} replicates, and are worked out every 15 days to 3 months, then every 30 days to a year and every 90 days after that, with the days between read off a line.
+          The grounding chance doesn't change with the season.</li>
       </ul>
       <h3>Groundings</h3>
       <ul>
-        <li>${m.n_grounded} drifters ran aground on a coast of the study area. A drifter that runs aground stops reporting, so the main model
+        <li>${A.n_grounded} drifters ran aground on a coast of the study area. A drifter that runs aground stops reporting, so the main model
           (and the report) leaves those last moves out, and material only drifts or leaves the box.</li>
         <li>With <b>Groundings</b> on, each square also has a chance of sending material ashore within 15 days, measured from those drifters,
           and the rest drifts as before. The numbers in the water are then a little lower.</li>
         <li>The chances come straight from the drifter counts, so coasts with few drifters have rough estimates; the 95% ranges show how rough.
-          ${m.n_grounded_dropped} groundings away from the mapped coast (small islands, or likely record errors) are left out.</li>
+          ${A.n_grounded_dropped} groundings away from the mapped coast (small islands, or likely record errors) are left out.</li>
       </ul>
       <h3>Data flags</h3>
       <ul>
-        <li>Each start is flagged by how many drifters started a 15-day move from it. <b>Well sampled</b> means 100 or more, the level we treat as adequate.</li>
+        <li>Each start is flagged by how many of the chosen drifters started a 15-day move from it. <b>Well sampled</b> means 100 or more, the level we treat as adequate.</li>
         <li><b>Limited data</b> (10–99) means the square's answer is partly filled in from the surrounding 4° area.</li>
         <li><b>Very thin data</b> (under 10) means the answer is a rough guide, and its 95% range will look narrower than it really is.</li>
       </ul>
       <h3>Where the numbers come from</h3>
       <ul>
-        <li>${m.n_drifters.toLocaleString("en")} surface drifters of the Global Drifter Program (${m.years[0]}–${m.years[1]}), turned into ${m.n_moves.toLocaleString("en")}
-          15-day moves between 2° squares, with thin squares borrowing from their 4° area (alpha ${m.alpha.toFixed(1)}). Longer times chain 15-day steps.</li>
+        <li>${A.n_drifters.toLocaleString("en")} surface drifters of the Global Drifter Program (${m.years[0]}–${m.years[1]}), turned into ${A.n_moves.toLocaleString("en")}
+          15-day moves between 2° squares, with thin squares borrowing from their 4° area (alpha ${A.alpha.toFixed(1)}). Longer times chain 15-day steps.</li>
         <li>The 95% ranges are a drifter bootstrap: the drifters are resampled with replacement ${m.n_boot.toLocaleString("en")} times, the model is refitted
-          to each resample and run from the same start, and the range covers the middle 95% of the answers. The numbers shown are from the model fitted to all drifters.</li>
-        <li>All seasons, and drifters with and without their drogue, are pooled. This is the typical near-surface drift of water and floating material, not a forecast for a particular date.
-          Material more exposed to wind (e.g. oil or debris) tends to travel further west and leave more often.</li>
+          to each resample and run from the same start, and the range covers the middle 95% of the answers. The numbers shown are from the model fitted to the full set, not a resample.</li>
+        <li>This is the typical near-surface drift of water and floating material, not a forecast for a particular date.</li>
+        <li><b>Near the Benguela coast</b> shows the share there on that day. Material passes through, so from elsewhere the row also gives the chance it has been there by then. Drifters that run aground stop reporting, so without Groundings that is a lower bound.</li>
+        <li><b>Mostly in</b> names the areas holding most of the material, using the report's subregions. <b>Orange Basin</b> is the square holding the Venus and Mopane discoveries, reading block numbers as degrees, not published well positions.</li>
         <li>The ranges show the effect of which drifters we happened to have. They leave out how much the ocean changes from year to year, which would widen some of them: resampling whole years instead makes the range for the centre's longitude about ${yr} times as wide.</li>
       </ul>
       <h3>How far to trust it</h3>
       <ul>
+        <li>The notes under each answer give the checks that apply to it. All of them, for all drifters, are here.</li>
         <li>Checked on drifters the model never saw. Chances of being in a square hold up out to a year: squares given about a ${c1[0]}% chance after a year really held drifters ${c1[1]}% of the time.</li>
         <li>The 90% line really held ${cal[0]}% of those drifters after 15 days, ${cal[1]}% after 3 months and ${cal[2]}% after a year, so treat it as a little optimistic at long times.</li>
         <li>The chance of having left the study area runs high at long times: ${ex[0]} after 3 months and ${ex[1]} after a year, across all starts.</li>
@@ -878,6 +1020,15 @@
     b.onclick = () => setSteps(s, true);
     $("#timeChips").appendChild(b);
   });
+  const chip = (label, attrs, onclick) => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.textContent = label; b.type = "button"; b.setAttribute("aria-pressed", "false");
+    Object.assign(b.dataset, attrs);
+    b.onclick = onclick;
+    return b;
+  };
+  Object.entries(SETS).forEach(([key, { label }]) => $("#setChips").appendChild(chip(label, { set: key }, () => setCondition("drifters", key))));
+  [null, 0, 1, 2, 3].forEach((s) => $("#seasonChips").appendChild(chip(s === null ? "All year" : SEASON_NAMES[s], { season: String(s) }, () => setCondition("season", s))));
   $("#stepsIn").max = M.maxSteps;
   $("#stepsIn").addEventListener("input", (e) => setSteps(+e.target.value, false));
   $("#stepsIn").addEventListener("change", (e) => setSteps(+e.target.value, true));
@@ -936,8 +1087,12 @@
   renderInfo();
   if (D.forecast) $("#forecastTabSub").textContent = "Through the year";
   const init = readHash();
+  if (init.drifters) state.drifters = init.drifters;
+  if (init.season !== undefined) state.season = init.season;
   if (init.start) state.start = init.start;
   if (init.ground) setLayer("ground", true);
+  M = modelFor(state.layers.ground ? "shore" : "water", state.drifters);
+  renderConditions();
   setSteps(init.steps || 6, false);
   $("#timeStep").classList.add("await");
   $("#mapHint").textContent = "Choose a start on the map, then pick how long";

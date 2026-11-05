@@ -1,0 +1,49 @@
+starts,start_rows,quantity,days,pct_covered,mean_bias,truth,mean_interval_width,mean_bias_without_shrinkage
+whole Benguela coast,1,pct_left_box,15,100.0,0.0,0.0027,0.0266,-0.0027
+"single cells, 100+ drifters",115,pct_left_box,15,96.7,0.0838,,1.3786,
+"single cells, 10-99 drifters",419,pct_left_box,15,93.4,0.2066,,3.084,
+"single cells, under 10 drifters",59,pct_left_box,15,96.4,0.3931,,3.1368,
+whole Benguela coast,1,pct_in_coastal_zone,15,66.0,-3.3148,28.1657,11.4921,0.8311
+"single cells, 100+ drifters",115,pct_in_coastal_zone,15,92.8,0.0117,,0.2473,
+"single cells, 10-99 drifters",419,pct_in_coastal_zone,15,98.8,0.0474,,0.3983,
+"single cells, under 10 drifters",59,pct_in_coastal_zone,15,98.2,0.3023,,1.5768,
+whole Benguela coast,1,centre_lat,15,82.0,-0.2019,-27.0678,0.671,-0.0441
+"single cells, 100+ drifters",115,centre_lat,15,92.0,0.032,,0.4031,
+"single cells, 10-99 drifters",419,centre_lat,15,87.3,0.1101,,0.6228,
+"single cells, under 10 drifters",59,centre_lat,15,75.3,0.4224,,3.3832,
+whole Benguela coast,1,centre_lon,15,40.0,-0.4249,12.4193,2.4166,-0.1541
+"single cells, 100+ drifters",115,centre_lon,15,92.2,0.0336,,0.5049,
+"single cells, 10-99 drifters",419,centre_lon,15,89.1,0.1189,,0.789,
+"single cells, under 10 drifters",59,centre_lon,15,79.3,0.5838,,6.8744,
+whole Benguela coast,1,pct_left_box,90,95.0,0.0672,0.3061,1.1903,-0.0481
+"single cells, 100+ drifters",115,pct_left_box,90,81.7,0.171,,2.2193,
+"single cells, 10-99 drifters",419,pct_left_box,90,89.4,0.7546,,5.5297,
+"single cells, under 10 drifters",59,pct_left_box,90,88.1,1.676,,17.6832,
+whole Benguela coast,1,pct_in_coastal_zone,90,92.0,0.1053,0.2193,1.3082,0.4101
+"single cells, 100+ drifters",115,pct_in_coastal_zone,90,95.2,0.0132,,0.2035,
+"single cells, 10-99 drifters",419,pct_in_coastal_zone,90,96.5,0.003,,0.0462,
+"single cells, under 10 drifters",59,pct_in_coastal_zone,90,94.8,0.0082,,0.1757,
+whole Benguela coast,1,centre_lat,90,9.0,-0.7509,-21.1601,1.0501,-0.1206
+"single cells, 100+ drifters",115,centre_lat,90,91.2,0.0586,,0.6274,
+"single cells, 10-99 drifters",419,centre_lat,90,84.4,0.1682,,1.0306,
+"single cells, under 10 drifters",59,centre_lat,90,78.4,0.5754,,4.8928,
+whole Benguela coast,1,centre_lon,90,72.0,-0.4532,0.7335,2.2573,-0.0451
+"single cells, 100+ drifters",115,centre_lon,90,91.2,0.0846,,0.9459,
+"single cells, 10-99 drifters",419,centre_lon,90,88.5,0.1704,,1.4818,
+"single cells, under 10 drifters",59,centre_lon,90,83.2,0.66,,8.5489,
+whole Benguela coast,1,pct_left_box,360,77.0,-1.5275,6.7866,4.2447,-0.4902
+"single cells, 100+ drifters",115,pct_left_box,360,88.6,0.3767,,3.7473,
+"single cells, 10-99 drifters",419,pct_left_box,360,86.3,1.1203,,7.4231,
+"single cells, under 10 drifters",59,pct_left_box,360,77.7,4.6229,,25.7832,
+whole Benguela coast,1,pct_in_coastal_zone,360,55.0,0.0011,0.002,0.0798,0.25
+"single cells, 100+ drifters",115,pct_in_coastal_zone,360,92.8,0.0023,,0.0363,
+"single cells, 10-99 drifters",419,pct_in_coastal_zone,360,88.6,0.0022,,0.02,
+"single cells, under 10 drifters",59,pct_in_coastal_zone,360,90.7,0.0018,,0.0253,
+whole Benguela coast,1,centre_lat,360,12.0,-0.8412,-23.1525,1.1319,0.031
+"single cells, 100+ drifters",115,centre_lat,360,78.3,0.1433,,0.5562,
+"single cells, 10-99 drifters",419,centre_lat,360,80.3,0.2043,,1.098,
+"single cells, under 10 drifters",59,centre_lat,360,77.6,0.6478,,5.8178,
+whole Benguela coast,1,centre_lon,360,13.0,1.2727,-27.0482,1.8677,0.2925
+"single cells, 100+ drifters",115,centre_lon,360,83.0,0.2853,,1.6616,
+"single cells, 10-99 drifters",419,centre_lon,360,72.4,0.5099,,2.2076,
+"single cells, under 10 drifters",59,centre_lon,360,79.2,1.0905,,8.6665,

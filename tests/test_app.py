@@ -13,12 +13,15 @@ import pytest
 
 from src.app.check_intervals import brute_force, forward_quantities
 from src.app.export_app_data import (APP_DATA_PATH, QUANTITIES, b64_float32, bootstrap_intervals, functionals,
-                                     great_circle_km, groundings, quantities, shore_fit, start_matrix, step_back,
-                                     zone_cells)
-from src.common.config import REPO_ROOT
+                                     great_circle_km, groundings, quantities, saved_season_counts, shore_fit, start_matrix,
+                                     step_back, zone_cells)
+from src.common.config import PROCESSED_DIR, REPO_ROOT
+from src.forecasting.seasonal_matrices import chain_season, season_matrices
 from src.gridding.coast import RAN_AGROUND
 from src.gridding.transitions import ENDED, IN_R, LEFT_R
+from src.inference.drogue_comparison import UNDROGUED_STEM, undrogued_only
 from src.inference.estimators import naive_P
+from src.linalg.connectivity import absorbing
 
 REGION = {"lat_min": -4.0, "lat_max": 4.0, "lon_min": 0.0, "lon_max": 8.0, "cell_size_deg": 2.0}  # 4 x 4 cells
 CHROME = next((p for p in ("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -46,10 +49,12 @@ def test_backward_functionals_match_forward_steps():
     F0 = functionals(lat_c, lon_c, benguela, coast, n_shore)
     S = start_matrix([3, -1], np.array([4, 9]), P.shape[0])
     assert np.allclose(S[1, [4, 9]], 0.5) and np.isclose(S[1].sum(), 1) and S[0, 3] == 1
+    Q = absorbing(P, coast)
     for k, F in enumerate(step_back(P, F0, 5), start=1):
         x = S @ np.linalg.matrix_power(P, k)  # forward, one row per start
+        h = S @ np.linalg.matrix_power(Q, k)
         q = quantities(S @ F, np.zeros(2), np.zeros(2))
-        assert np.allclose(q, forward_quantities(x, n, lat_c, lon_c, benguela, coast, np.zeros(2), np.zeros(2)))
+        assert np.allclose(q, forward_quantities(x, h, n, lat_c, lon_c, benguela, coast, np.zeros(2), np.zeros(2)))
         inside = x[:, :n].sum(axis=1)
         assert np.allclose(q[0], 100 * x[:, n]) and np.allclose(q[6], 100 * x[:, n + 1:].sum(axis=1))
         assert np.allclose(q[3], (x[:, :n] * lat_c).sum(axis=1) / inside)
@@ -121,7 +126,7 @@ def test_fast_intervals_match_brute_force():
     for s, n in enumerate([1, 3, 6]):
         assert np.allclose(low[:, n - 1], lo[:, s], rtol=1e-4, atol=1e-4)
         assert np.allclose(high[:, n - 1], hi[:, s], rtol=1e-4, atol=1e-4)
-    assert len(QUANTITIES) == low.shape[0] == 7
+    assert len(QUANTITIES) == low.shape[0] == 8
 
 
 def test_great_circle_and_zone_cells():
@@ -156,34 +161,59 @@ def test_page_maths_matches_python():
     out = json.loads(html.unescape(found.group(1)))
     assert out["ok"], out.get("error")
 
-    prod = load_product()
     region = load_region_bounds()
-    land = land_fraction(region, prod.cell_size, land_paths())
-    models, n_cells, _, _ = build_models(region, load_transitions(region, verbose=False), np.load(TRANSITIONS_PATH),
-                                         prod.alpha, land)
-    assert out["cell_of"] == prod.cell_of(-28.0, 14.0)
-    release = [c for c in coastal_cells(region, prod.cell_size, land) if prod.start_drifters[c] > 0]
-    for variant, results in out["results"].items():
+    prods = {"all": load_product(), "undrogued": load_product(drifters="undrogued")}
+    land = land_fraction(region, prods["all"].cell_size, land_paths())
+    coast = coastal_cells(region, prods["all"].cell_size, land)
+    assert out["cell_of"] == prods["all"].cell_of(-28.0, 14.0)
+    base = load_transitions(region, verbose=False)
+    with np.load(TRANSITIONS_PATH) as z:
+        stored = {k: z[k] for k in z.files}
+    unt = ~stored["drogued"].astype(bool)
+    built = {"all": build_models(region, base, stored, prods["all"].alpha, land)}
+    shores = built["all"][0]["shore"]["shores"]
+    built["undrogued"] = build_models(region, undrogued_only(base), {k: (v[unt] if v.shape == unt.shape else v) for k, v in stored.items()},
+                                      prods["undrogued"].alpha, land, shores)
+    for run in out["results"]:
+        key, variant, season = run["set"], run["variant"], run["season"]
+        models, n_cells, drifters, _ = built[key]
         P = models[variant]["P"]
-        assert out["n_states"][variant] == P.shape[0]
-        for r in results:
-            x = np.zeros(P.shape[0])
+        assert run["n_states"] == P.shape[0]
+        release = coast[drifters[coast] > 0]
+        prod = prods[key]
+        if season is None:
+            step_matrix = lambda step: P
+        else:
+            counts, beta = saved_season_counts(key, n_cells + 1)
+            seasons = season_matrices(P, counts, beta, n_cells + 1)
+            step_matrix = lambda step: seasons[chain_season(season, step)]
+        for r in run["starts"]:
+            x0 = np.zeros(P.shape[0])
             if r["start"]["kind"] == "coast":
-                x[release] = 1 / len(release)
+                x0[release] = 1 / release.size
             else:
-                x[r["start"]["cell"]] = 1
+                x0[r["start"]["cell"]] = 1
+            x, h = x0.copy(), x0.copy()
+            done = 0
             for s in r["steps"]:
-                dist = x @ np.linalg.matrix_power(P, s["n"])
+                for step in range(done, s["n"]):
+                    x, h = x @ step_matrix(step), h @ absorbing(step_matrix(step), coast)
+                done = s["n"]
                 assert abs(s["mass"] - 1) < 1e-9
-                water = dist[:n_cells]
-                assert np.isclose(s["stats"]["pct_left_box"], 100 * dist[n_cells], rtol=1e-4, atol=1e-6)
-                assert np.isclose(s["stats"]["pct_aground"], 100 * dist[n_cells + 1:].sum(), rtol=1e-4, atol=1e-6)
+                water = x[:n_cells]
+                assert np.isclose(s["stats"]["pct_left_box"], 100 * x[n_cells], rtol=1e-4, atol=1e-6)
+                assert np.isclose(s["stats"]["pct_aground"], 100 * x[n_cells + 1:].sum(), rtol=1e-4, atol=1e-6)
                 assert np.isclose(s["stats"]["centre_lat"], water @ prod.lat_centre / water.sum(), atol=1e-4)
                 assert np.isclose(s["stats"]["centre_lon"], water @ prod.lon_centre / water.sum(), atol=1e-4)
+                assert np.isclose(s["reached"], 100 * h[coast].sum(), rtol=1e-4, atol=1e-6)
                 for cell, p in s["top"]:
-                    assert np.isclose(p, dist[cell], atol=1e-6)
-                if variant == "water":  # the water model is the product itself
-                    assert np.allclose(dist, prod.forecast(days=s["n"] * prod.tau_days, start=x), atol=1e-6)
+                    assert np.isclose(p, x[cell], atol=1e-6)
+                if variant == "water":  # the water model is the product itself, with its seasons
+                    code = None if season is None else "DJF MAM JJA SON".split()[season]
+                    assert np.allclose(x, prod.forecast(days=s["n"] * prod.tau_days, start=x0, season=code), atol=1e-6)
                 assert s["areas"][0]["cells"] <= s["areas"][1]["cells"]
-                lo, hi = s["interval"]
-                assert lo <= hi
+                assert np.isclose(sum(s["shares"]), 100 * water.sum(), rtol=1e-6)
+                if s["interval"] is not None:
+                    assert s["interval"][0] <= s["interval"][1]
+                elif r["start"]["kind"] != "coast":
+                    assert drifters[r["start"]["cell"]] == 0  # only a start with no drifters in this set has no interval

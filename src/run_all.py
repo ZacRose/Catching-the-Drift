@@ -10,8 +10,9 @@ The first two steps read the cloud copy of the GDP once and cache it in data/int
 3 GB of memory). The caches aren't in git, but the transition tables are, so --from-tables starts after them and
 needs no internet or caches; the scripts that use hourly readings are then left out.
 
-Run: python3 -m src.run_all                 (35 minutes on a 10-core laptop once the caches exist, 2026-11-05)
-     python3 -m src.run_all --from-tables   (no caches needed; about 30 minutes)
+Run: python3 -m src.run_all                 (about 1 hour 50 minutes on a 10-core laptop once the caches exist: each step timed on
+                                             2026-11-05 and added up, see project_plan.txt section 9)
+     python3 -m src.run_all --from-tables   (no caches needed; about 1 hour 45 minutes)
      python3 -m src.run_all --list          (just print the order)
 """
 import argparse
@@ -54,6 +55,8 @@ FROM_TABLES = [
     "src.linalg.connectivity",          # Week 9: RQ1, which subregions supply which, and the Orange Basin
     "src.inference.calibration",        # Week 9: do the probabilities mean what they say?
     "src.inference.year_intervals",     # Week 9: year-to-year change, and predicting later years
+    "src.inference.drogue_comparison",  # Week 9: all drifters against undrogued only, and the undrogued matrix
+    "src.forecasting.seasonal_matrices",  # Week 9: 2 deg seasonal matrices, and crossing seasons
     "src.inference.interval_coverage",  # Week 9: do the intervals contain a known truth?
     "src.app.export_app_data",          # Week 9: the data the app loads
     "src.app.check_intervals",          # Week 9: the app's intervals, recomputed the slow way

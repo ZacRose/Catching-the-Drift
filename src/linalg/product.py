@@ -18,6 +18,8 @@ Example:
     dist = prod.forecast(lat=-28.0, lon=14.0, days=90)   # 6 steps of 15 days
     prod.summary(dist)                                   # % left the box, centre, top cells
     baseline = load_product(cell_size=4.0)               # the 4 deg naive P, the proposal's baseline (objective O1)
+    wind = load_product(drifters="undrogued")            # the same fit on moves that start without a drogue
+    prod.forecast(lat=-28.0, lon=14.0, days=360, season="DJF")   # released on the first day of a season
 
 What it is and isn't (for the report and for anyone using it):
 - States are 2 deg cells of the box in config/region.yaml, plus "left the box" (the last state,
@@ -30,12 +32,16 @@ What it is and isn't (for the report and for anyone using it):
   predicted against 5.2% observed after 90 days, and 15.4% against 10.4% after a year (calibration.py).
 - Rows for cells with no drifters (prior_only) are the 4 deg prior alone, and intervals for cells
   with under about 10 drifters are unreliable (bootstrap.py); check start_drifters.
+- forecast(season=...) starts on the first day of a season and changes matrix every 90 days as the seasons pass
+  (seasonal_matrices.py). A typical year's pattern, not a forecast for a particular year.
 """
 import os
 from dataclasses import dataclass, field
 import numpy as np
 
 from src.common.config import PROCESSED_DIR
+from src.forecasting.seasonal_forecast import SEASONS
+from src.forecasting.seasonal_matrices import COUNTS_PATH, chain_season, season_matrices
 from src.gridding.grid import grid_edges
 from src.gridding.transitions import BASELINE_CELL_SIZE, TAU_DAYS
 from src.ingest.load import in_box
@@ -57,6 +63,7 @@ class Product:
     lat_centre: np.ndarray  # per cell
     lon_centre: np.ndarray
     long_run: dict = field(default_factory=dict)
+    seasons: np.ndarray = None  # (4, n, n), the seasons' matrices in the order of SEASONS, if saved
 
     @property
     def n_cells(self):
@@ -78,16 +85,19 @@ class Product:
         ids = row * (len(lon_edges) - 1) + col
         return int(ids[0]) if ids.size == 1 else ids
 
-    def forecast(self, lat=None, lon=None, days=None, start=None):
-        """Distribution over states after `days` (a multiple of tau), from a position or a start distribution."""
+    def forecast(self, lat=None, lon=None, days=None, start=None, season=None):
+        """Distribution over states after `days` (a multiple of tau), from a position or a start distribution.
+        All year by default; season ("DJF", "MAM", "JJA" or "SON") releases on the first day of that season."""
         if days is None or days % self.tau_days:
             raise ValueError(f"days must be a multiple of {self.tau_days}.")
         if start is None:
             start = np.zeros(self.P.shape[0])
             start[self.cell_of(lat, lon)] = 1.0
         x = np.asarray(start, dtype=float)
-        for _ in range(days // self.tau_days):
-            x = x @ self.P
+        if season is not None and self.seasons is None:
+            raise ValueError("This product has no seasonal matrices: run src.forecasting.seasonal_matrices.")
+        for step in range(days // self.tau_days):
+            x = x @ (self.P if season is None else self.seasons[chain_season(SEASONS.index(season), step)])
         return x
 
     def summary(self, dist, top=5):
@@ -101,12 +111,16 @@ class Product:
                                int(self.start_drifters[c])) for c in order]}
 
 
-def load_product(cell_size=2.0, tau_days=TAU_DAYS, processed_dir=PROCESSED_DIR):
-    """A P with its bootstrap uncertainty (and the long-run pattern if saved): the 2 deg shrinkage P by default,
+def load_product(cell_size=2.0, tau_days=TAU_DAYS, processed_dir=PROCESSED_DIR, drifters="all"):
+    """A P with its bootstrap uncertainty (and the long-run pattern and seasons if saved): the 2 deg shrinkage P by default,
     or the 4 deg naive P with cell_size=4.0. The naive P has no row for a cell with no drifters, so material
-    arriving there is lost; alpha is 0, as it has no prior."""
+    arriving there is lost; alpha is 0, as it has no prior. drifters="undrogued" gives the 2 deg matrix fitted
+    to moves that start without a drogue (drogue_comparison.py), for which no long-run pattern is saved."""
+    if drifters not in ("all", "undrogued") or (drifters == "undrogued" and cell_size == BASELINE_CELL_SIZE):
+        raise ValueError("drifters must be 'all', or 'undrogued' at 2 deg.")
     name = "naive_P" if cell_size == BASELINE_CELL_SIZE else "shrinkage_P"
-    stem = os.path.join(processed_dir, f"{name}_{cell_size:g}deg_tau{tau_days}d")
+    suffix = "" if drifters == "all" else "_undrogued"
+    stem = os.path.join(processed_dir, f"{name}_{cell_size:g}deg_tau{tau_days}d{suffix}")
     for path in (stem + ".npz", stem + "_bootstrap.npz"):
         if not os.path.exists(path):
             raise FileNotFoundError(f"{path} not found: run src.inference.shrinkage_fit, then src.inference.bootstrap.")
@@ -117,12 +131,19 @@ def load_product(cell_size=2.0, tau_days=TAU_DAYS, processed_dir=PROCESSED_DIR):
                                indexing="ij")
     long_run = {}
     lr_path = os.path.join(processed_dir, f"long_run_{name}_{cell_size:g}deg_tau{tau_days}d.npz")
-    if os.path.exists(lr_path):
+    if os.path.exists(lr_path) and drifters == "all":
         long_run = {k: v for k, v in np.load(lr_path).items() if k not in BOX_KEYS}
+    seasons = None
+    counts_path = COUNTS_PATH if processed_dir == PROCESSED_DIR else os.path.join(processed_dir, os.path.basename(COUNTS_PATH))
+    if name == "shrinkage_P" and os.path.exists(counts_path):
+        z = np.load(counts_path)
+        counts = np.zeros((4, *p["P"].shape))
+        counts[z[f"{drifters}_season"], z[f"{drifters}_start"], z[f"{drifters}_end"]] = z[f"{drifters}_n"]
+        seasons = season_matrices(p["P"], counts, float(z[f"{drifters}_beta"]))
     return Product(P=p["P"], se=b["se"], ci_low=b["ci_low"], ci_high=b["ci_high"],
                    start_drifters=p["start_drifters"], alpha=float(p["alpha"]) if "alpha" in p.files else 0.0, region=region,
                    cell_size=float(p["cell_size_deg"]), tau_days=int(p["tau_days"]),
-                   lat_centre=lat_c.ravel(), lon_centre=lon_c.ravel(), long_run=long_run)
+                   lat_centre=lat_c.ravel(), lon_centre=lon_c.ravel(), long_run=long_run, seasons=seasons)
 
 
 if __name__ == "__main__":
