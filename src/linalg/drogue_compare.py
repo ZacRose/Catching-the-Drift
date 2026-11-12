@@ -1,18 +1,17 @@
 """
 drogue_compare.py
 
-One map comparing where Benguela coastal material is after 360 days under the drogued-only and the
-undrogued-only 2 deg shrinkage matrices: the mean position (diamond) and its path over the year
-(dotted line) for each, over its probability map (one colour per subset, opacity rising with log
-probability), with the coastal release cells (those with drifters in either subset) outlined.
+One map comparing where Benguela coastal material is after 360 days under the all-drifters 2 deg
+shrinkage matrix (the product) and the undrogued-only one: the mean position (diamond) and its path over the year
+(dotted line) for each, over the two probability maps (blue all drifters, orange undrogued; shading
+log probability from 0.1% per cell up to each map's likeliest cell), with the coastal release cells (those with drifters in either subset) outlined.
 
 Each matrix is fitted the way robustness.py fits its drogue settings: drifters split by drogue status
 at the START of each move (Week 4 issue e), alpha chosen on the train -> valid drifters of that subset
 (evaluate.tune_alpha), then refitted on all of that subset's moves, with the 4 deg prior. The release
 is spread evenly over the Benguela coastal cells that have drifters in that subset (as coastal_release.py).
 
-Caveat: drogued-only data are thin (robustness.py: under 10% of 4 deg cells adequate, decision 6a),
-so the drogued path leans more on the 4 deg prior and is indicative.
+The all-drifters fit reproduces the saved product (checked against shrinkage_P_2deg_tau15d.npz).
 
 Outputs: outputs/figures/drogue_compare_360d.png and outputs/results/drogue_compare_360d.csv.
 
@@ -27,7 +26,7 @@ import matplotlib.patheffects as pe
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 
-from src.common.config import FIGURES_DIR, RESULTS_DIR, load_region_bounds
+from src.common.config import FIGURES_DIR, PROCESSED_DIR, RESULTS_DIR, load_region_bounds
 from src.gridding.coast import coastal_cells, land_fraction, land_paths
 from src.gridding.grid import grid_edges, per_cell_counts
 from src.gridding.trajectory_map import _degrees, draw_land
@@ -39,10 +38,11 @@ from src.inference.transition_data import TAU_DAYS, load_transitions, parent_sta
 from src.linalg.release_map import centre_of_mass
 
 DAYS = 360
-VMIN, VMAX, MAX_ALPHA = 1e-4, 0.03, 0.75  # heat map: probability per 2 deg cell shown, and darkest opacity
+PRODUCT = os.path.join(PROCESSED_DIR, "shrinkage_P_2deg_tau15d.npz")
+VMIN, MAX_ALPHA = 1e-3, 0.8  # heat map: faintest probability per 2 deg cell shown, opacity of the likeliest
 CELL = 2.0
 SUBSETS = [  # (filter, label, colour, marker face)
-    ("drogued", "Drogued only", "#1f4e9c", "#1f4e9c"),
+    ("all", "All drifters", "#1f4e9c", "#1f4e9c"),
     ("undrogued", "Undrogued only", "#d95f02", "#d95f02"),
 ]
 
@@ -71,15 +71,23 @@ def centre_path(P, release, region, steps):
     return np.array(path), x
 
 
-def heat_rgba(dist, shape, colour):
-    """One colour, opacity rising with log probability (1e-4 to 0.03 per cell), so two maps can overlay."""
+def intensity(dist, shape):
+    """0-1 shading strength per cell: log probability from VMIN up to the map's own likeliest cell."""
     p = dist[:-1].reshape(shape)
-    lo, hi = np.log10(VMIN), np.log10(VMAX)
-    a = np.clip((np.log10(np.maximum(p, 1e-12)) - lo) / (hi - lo), 0, 1)
-    a[p < VMIN] = 0
+    lo, hi = np.log10(VMIN), np.log10(p.max())
+    return np.clip((np.log10(np.maximum(p, 1e-12)) - lo) / (hi - lo), 0, 1)
+
+
+def heat_rgba(results, shape):
+    """Both maps in one image: each cell's colour is the subsets' colours weighted by their strength
+    there (so a cell reads blue where all drifters dominate, orange where undrogued do), and its
+    opacity is the stronger of the two."""
+    a = np.stack([intensity(r["dist"], shape) for r in results])
+    cols = np.array([mcolors.to_rgb(r["colour"]) for r in results])
+    w = a / np.maximum(a.sum(axis=0), 1e-12)
     rgba = np.zeros(shape + (4,))
-    rgba[..., :3] = mcolors.to_rgb(colour)
-    rgba[..., 3] = MAX_ALPHA * a
+    rgba[..., :3] = np.einsum("kij,kc->ijc", w, cols)
+    rgba[..., 3] = MAX_ALPHA * a.max(axis=0)
     return rgba
 
 
@@ -89,9 +97,7 @@ def plot(region, zone, results, out_path):
     lat_edges, lon_edges = grid_edges(region, CELL)
     shape = (len(lat_edges) - 1, len(lon_edges) - 1)
     extent = (lon_edges[0], lon_edges[-1], lat_edges[0], lat_edges[-1])
-    for res in results:
-        ax.imshow(heat_rgba(res["dist"], shape, res["colour"]), origin="lower", extent=extent,
-                  interpolation="nearest", zorder=1)
+    ax.imshow(heat_rgba(results, shape), origin="lower", extent=extent, interpolation="nearest", zorder=1)
     draw_land(ax)
     n_lon = len(lon_edges) - 1
     for c in zone:
@@ -108,9 +114,7 @@ def plot(region, zone, results, out_path):
                     color=colour, fontweight="bold", zorder=8,
                     path_effects=[pe.withStroke(linewidth=3, foreground="white")])
         handles.append(Line2D([], [], color=colour, ls=(0, (1, 2)), lw=1.6, marker="D", ms=8, mfc=colour,
-                              mec="white", label=f"{label}: mean position and path"))
-        handles.append(Patch(fc=colour, alpha=0.55, ec="none", label=f"{label}: where material is (darker = likelier)"))
-    handles.append(Patch(fc="#8a6a5c", alpha=0.7, ec="none", label="Both overlap (brown-grey)"))
+                              mec="white", label=f"{label}: mean position"))
     handles.append(Line2D([], [], color="#d62728", marker="s", ls="none", mfc="none", ms=9,
                           label="Benguela coastal release cells"))
     ax.legend(handles=handles, loc="lower left", fontsize=8, ncol=1, framealpha=0.9)
@@ -119,7 +123,7 @@ def plot(region, zone, results, out_path):
     ax.set_aspect("equal")
     ax.xaxis.set_major_formatter(_degrees("lon"))
     ax.yaxis.set_major_formatter(_degrees("lat"))
-    ax.set_title(f"Drogued vs undrogued drifters: after {DAYS} days from the Benguela coast", loc="left")
+    ax.set_title(f"All drifters vs undrogued only: after {DAYS} days from the Benguela coast", loc="left")
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
@@ -132,6 +136,8 @@ if __name__ == "__main__":
     results, rows, released = [], [], set()
     for filt, label, colour, _ in SUBSETS:
         P, alpha, drifters, sub = fit_subset(table, filt, region, assignment)
+        if filt == "all" and not np.allclose(P, np.load(PRODUCT)["P"]):
+            raise ValueError("All-drifters fit differs from the saved product; rerun src.inference.shrinkage_fit.")
         release = zone[drifters[zone] > 0]
         released.update(release.tolist())
         path, x = centre_path(P, release, region, DAYS // TAU_DAYS)
