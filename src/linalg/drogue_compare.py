@@ -3,8 +3,8 @@ drogue_compare.py
 
 One map comparing where Benguela coastal material is after 360 days under the drogued-only and the
 undrogued-only 2 deg shrinkage matrices: the mean position (diamond) and its path over the year
-(dotted line) for each, with the coastal release cells (those with drifters in either subset) outlined. No probability shading, so the two
-can share one map.
+(dotted line) for each, over its probability map (one colour per subset, opacity rising with log
+probability), with the coastal release cells (those with drifters in either subset) outlined.
 
 Each matrix is fitted the way robustness.py fits its drogue settings: drifters split by drogue status
 at the START of each move (Week 4 issue e), alpha chosen on the train -> valid drifters of that subset
@@ -22,7 +22,10 @@ import csv
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+import matplotlib.patheffects as pe
 from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 from src.common.config import FIGURES_DIR, RESULTS_DIR, load_region_bounds
 from src.gridding.coast import coastal_cells, land_fraction, land_paths
@@ -36,6 +39,7 @@ from src.inference.transition_data import TAU_DAYS, load_transitions, parent_sta
 from src.linalg.release_map import centre_of_mass
 
 DAYS = 360
+VMIN, VMAX, MAX_ALPHA = 1e-4, 0.03, 0.75  # heat map: probability per 2 deg cell shown, and darkest opacity
 CELL = 2.0
 SUBSETS = [  # (filter, label, colour, marker face)
     ("drogued", "Drogued only", "#1f4e9c", "#1f4e9c"),
@@ -67,11 +71,28 @@ def centre_path(P, release, region, steps):
     return np.array(path), x
 
 
+def heat_rgba(dist, shape, colour):
+    """One colour, opacity rising with log probability (1e-4 to 0.03 per cell), so two maps can overlay."""
+    p = dist[:-1].reshape(shape)
+    lo, hi = np.log10(VMIN), np.log10(VMAX)
+    a = np.clip((np.log10(np.maximum(p, 1e-12)) - lo) / (hi - lo), 0, 1)
+    a[p < VMIN] = 0
+    rgba = np.zeros(shape + (4,))
+    rgba[..., :3] = mcolors.to_rgb(colour)
+    rgba[..., 3] = MAX_ALPHA * a
+    return rgba
+
+
 def plot(region, zone, results, out_path):
     plt.rcParams.update({"font.size": 11})
     fig, ax = plt.subplots(figsize=(9, 4.8), layout="constrained")
-    draw_land(ax)
     lat_edges, lon_edges = grid_edges(region, CELL)
+    shape = (len(lat_edges) - 1, len(lon_edges) - 1)
+    extent = (lon_edges[0], lon_edges[-1], lat_edges[0], lat_edges[-1])
+    for res in results:
+        ax.imshow(heat_rgba(res["dist"], shape, res["colour"]), origin="lower", extent=extent,
+                  interpolation="nearest", zorder=1)
+    draw_land(ax)
     n_lon = len(lon_edges) - 1
     for c in zone:
         r, k = divmod(int(c), n_lon)
@@ -84,12 +105,15 @@ def plot(region, zone, results, out_path):
         ax.plot(path[-1, 1], path[-1, 0], marker="D", ms=10, mfc=colour, mec="white", mew=1.4, zorder=7)
         ax.annotate(f"{label}\n{abs(path[-1, 0]):.0f}°S, {abs(path[-1, 1]):.0f}°W", (path[-1, 1], path[-1, 0]),
                     xytext=(0, 14), textcoords="offset points", ha="center", va="bottom", fontsize=9.5,
-                    color=colour, fontweight="bold", zorder=8)
+                    color=colour, fontweight="bold", zorder=8,
+                    path_effects=[pe.withStroke(linewidth=3, foreground="white")])
         handles.append(Line2D([], [], color=colour, ls=(0, (1, 2)), lw=1.6, marker="D", ms=8, mfc=colour,
-                              mec="white", label=f"{label} (mean position, path over {DAYS} days)"))
+                              mec="white", label=f"{label}: mean position and path"))
+        handles.append(Patch(fc=colour, alpha=0.55, ec="none", label=f"{label}: where material is (darker = likelier)"))
+    handles.append(Patch(fc="#8a6a5c", alpha=0.7, ec="none", label="Both overlap (brown-grey)"))
     handles.append(Line2D([], [], color="#d62728", marker="s", ls="none", mfc="none", ms=9,
                           label="Benguela coastal release cells"))
-    ax.legend(handles=handles, loc="lower center", fontsize=9, framealpha=0.9)
+    ax.legend(handles=handles, loc="lower left", fontsize=8, ncol=1, framealpha=0.9)
     ax.set_xlim(region["lon_min"], region["lon_max"])
     ax.set_ylim(region["lat_min"], region["lat_max"])
     ax.set_aspect("equal")
@@ -111,7 +135,7 @@ if __name__ == "__main__":
         release = zone[drifters[zone] > 0]
         released.update(release.tolist())
         path, x = centre_path(P, release, region, DAYS // TAU_DAYS)
-        results.append({"label": label, "colour": colour, "path": path})
+        results.append({"label": label, "colour": colour, "path": path, "dist": x})
         rows.append({"drifters": filt, "alpha": round(alpha, 2), "n_moves": int(sub["drifter_id"].size),
                      "n_drifters": int(np.unique(sub["drifter_id"]).size), "release_cells": int(release.size),
                      "centre_lat_360d": round(float(path[-1, 0]), 3), "centre_lon_360d": round(float(path[-1, 1]), 3),
