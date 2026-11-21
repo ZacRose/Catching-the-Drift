@@ -205,6 +205,10 @@ def plot(reliability_rows, exit_rows, coverage_rows, out_path):
 
     def diagonal(ax, rows):
         ok = [v for v in rows if v["observed_pct"] > 0]
+        if not ok:  # the exit check is skipped without the region and records caches (run_all --from-tables)
+            ax.text(0.5, 0.5, "Needs the region and records caches\n(skipped with --from-tables)",
+                    ha="center", va="center", transform=ax.transAxes)
+            return
         low, top = min(v["predicted_pct"] for v in ok), max(max(v["predicted_pct"], v["ci_high"]) for v in ok)
         ax.plot([low, top], [low, top], color="0.6", ls=":", lw=1.5, label="predicted = observed")
         ax.set_xscale("log")
