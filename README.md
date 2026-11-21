@@ -4,12 +4,21 @@ If something floating enters the water off south-west Africa, where is it likely
 or a year, and how far can that answer be trusted? This project estimates it from 28 years of satellite-tracked
 drifting buoys, as a transition matrix anyone can load and step forward, with its uncertainty attached.
 
-**DATA3001, Term 3 2026.** Isaac Rose, Zhiru Lin (computational); Vidisha Trivedi, Liam Lightfoot (quantitative);
+**DATA3001, Term 3 2026.** Isaac Rose, Zhiru Lin (computational), Vidisha Trivedi, Liam Lightfoot (quantitative),
 Keyao Huang (business). Client: Shane Elipot, University of Miami.
 
 **To see the results now:** open [`app/index.html`](app/index.html), the South Atlantic Gyre Drift Explorer, in any
-browser. It needs no install, server or internet connection. Pick a start and a timeframe, and if you like the drifters and
-the release season; the [app's README](app/README.md) has the details.
+browser. It needs no install, server or internet connection. Pick a start, a timeframe and, if you like, the drifter
+type and release season. The [app's README](app/README.md) explains how it works.
+
+**To rerun everything:**
+
+```bash
+conda env create -f environment.yml && conda activate DATA3001
+python3 -m src.run_all --from-tables     # offline, from the committed transition tables
+```
+
+Full instructions are in [Reproducing the analysis](#reproducing-the-analysis).
 
 ## What we found
 
@@ -35,8 +44,8 @@ All numbers are from the 2° matrix with 95% intervals from resampling drifters,
   (0.10%) edges. Almost none leaves northwards, and none through the western edge.
 
 **How reliable it is (RQ2).** Shrinking thin 2° cells towards their 4° cell beats a fair baseline by 0.90 per move in
-held-out log-likelihood (0.84–0.98). Its gain over raw counts comes entirely from never giving a real move zero
-probability (raw counts do for 0.76% of test moves); where raw counts can score, they are very slightly better.
+held-out log-likelihood (0.83–0.98). Its gain over raw counts comes entirely from never giving a real move zero
+probability (raw counts do for 0.76% of test moves). Where raw counts can score, they are very slightly better.
 Checked on drifters the model never saw:
 
 - **Chances of being in a cell hold up at every horizon**, across five orders of magnitude: after a year, cells given
@@ -44,11 +53,12 @@ Checked on drifters the model never saw:
 - **The "90% area" holds** 92% of real moves at 15 days, 89% at 3 months and 85% at a year: a little optimistic at long times.
 - **The chance of having left the box runs high** at long times: 6.6% predicted against 5.2% after 3 months, and 15.4%
   against 10.4% after a year, across all starts.
-- **The past predicts later years**: a matrix fitted before 2015 scores moves from 2015 on within 1% of one fitted to the
-  same amount of data from all years.
+- **The past predicts later years**: on drifters first seen from 2015, a matrix fitted only to moves before 2015 scores
+  within 0.0075 per move (−0.0155 to +0.0006) of one fitted to the same number of moves from all years, and the
+  interval includes zero.
 
 **Wind matters most (RQ3).** Drogue status is the biggest single choice. Drifters that have lost their drogue are pushed
-by the wind: from the coast, material carried by them is about 10° further west after a year (27.0°W against 16.8°W; gap 10.2°,
+by the wind: from the coast, material carried by them is about 10° further west after a year (27.0°W against 16.8°W, gap 10.2°,
 9.1–11.3) and 7–8 times as likely to have left the box (6.8%, 3.9–10.9, against 0.89%). The main estimate pools both, so it sits
 between "water" and "floating material". Say which one you need. The undrogued matrix is saved too, and on held-out undrogued
 drifters it predicts no better than the pooled one at 15 days, but better at 3 months and a year, and its 90% line holds
@@ -87,7 +97,7 @@ not a forecast for a particular date or an oil-spill model.
 ```python
 from src.linalg.product import load_product
 
-prod = load_product()                                # the 2° product; cell_size=4.0 for the 4° baseline
+prod = load_product()                                # the 2° product, cell_size=4.0 for the 4° baseline
 dist = prod.forecast(lat=-29.0, lon=13.0, days=90)   # a distribution over cells and "left the box", in 15-day steps
 prod.summary(dist)                                   # % left the box, centre, the most likely cells
 prod.se, prod.ci_low, prod.ci_high                   # uncertainty for every entry of P
@@ -104,36 +114,49 @@ cells, numbered from the south-west corner, then "left the box" as the last stat
 
 ```bash
 conda env create -f environment.yml && conda activate DATA3001
-python3 -m pytest tests                  # about a minute; one test also needs Google Chrome, and is skipped without it
+python3 -m pytest tests                  # 139 tests, about a minute (the app test needs Google Chrome)
 python3 -m src.run_all --from-tables     # everything from the committed tables, no internet needed
 python3 -m src.run_all                   # everything from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
 ```
 
-Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the order; the whole run takes about 1 hour
-50 minutes on a 10-core laptop once the cloud data is cached (the app's export and interval check are about an hour of that). Every script also runs alone, and its docstring says what it needs and makes. The raw data are never changed: the GDP is read from
-the cloud with [clouddrift](https://github.com/Cloud-Drift/clouddrift) and region R is cached in `data/interim/` (not in git).
+The environment uses Python 3.14, and the tests also pass on 3.11.
+
+Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the steps in the order they run.
+The full run took 50 minutes on a 10-core laptop once the cloud data was cached. Every script also runs on its own,
+and its docstring says what it reads and writes.
+
+**Last full rerun:** [date], from a clean clone with `python3 -m src.run_all`. Every matrix and interval matched the committed
+outputs. Other differences were only line endings, floating-point rounding (at most 1e-9 relative) and figure rendering. The
+version submitted with the report is tagged `[tag name]`.
+
+The raw data are never changed: the GDP is read from the cloud with [clouddrift](https://github.com/Cloud-Drift/clouddrift)
+and region R is cached in `data/interim/` (not in git).
 
 To use another region, change the box in `config/region.yaml` (with its coastal zone and subregions) and rerun.
 `src/inference/region_swap.py` tests the quantitative half of this on a second box.
 
 ## Where things are
 
-| Question | Script | Results (`outputs/results/`, `outputs/figures/`) |
-|---|---|---|
-| Is there enough data? | `src/inference/adequacy.py`, `transition_adequacy.py` | `adequacy_*`, `transition_adequacy_*` |
-| Is the data sound? | `src/inference/data_quality.py`, `data_forensics.py` | `data_quality.png`, `data_forensics.csv` |
-| The transition table | `src/gridding/transitions.py`, `lags.py` | `data/processed/transitions_tau*d.npz`, `lag_*` |
-| RQ1: where material goes | `src/linalg/coastal_release.py`, `connectivity.py` | `coastal_release_*`, `connectivity*`, `orange_basin_release.png` |
-| RQ1: where it gathers | `src/linalg/long_run.py` | `long_run_*` |
-| RQ2: which estimator | `src/inference/evaluate.py`, `score_intervals.py`, `prior_sensitivity.py` | `evaluation_*`, `score_intervals*`, `prior_sensitivity*` |
-| Reliability | `src/inference/bootstrap.py`, `calibration.py`, `year_intervals.py`, `interval_coverage.py`, `markov_check.py` | `calibration*`, `year_intervals_*`, `interval_coverage_*`, `markov_check*` |
-| RQ3 and other choices | `src/inference/drogue_comparison.py`, `robustness.py`, `region_swap.py` | `drogue_comparison*`, `robustness*`, `region_swap*` |
-| RQ4: seasons | `src/forecasting/seasonal_forecast.py`, `seasonal_robustness.py`, `seasonal_matrices.py` | `seasonal_*` |
-| The app | `src/app/`, `app/` | `app/index.html`, `app_interval_check.csv` |
+| Question | Script | Results (`outputs/results/`, `outputs/figures/`) | In the report |
+|---|---|---|---|
+| Study region and the data | `src/gridding/trajectory_map.py` | `trajectory_map.png` | Figure 1 |
+| Is there enough data? | `src/inference/adequacy.py`, `transition_adequacy.py` | `adequacy_*`, `transition_adequacy_*` | Section 2.3, Figure 2 |
+| Is the data sound? | `src/inference/data_quality.py`, `data_forensics.py` | `data_quality.png`, `data_forensics.csv` | Section 2.2, Figure 3 |
+| The transition table | `src/gridding/transitions.py`, `lags.py` | `data/processed/transitions_tau*d.npz`, `lag_*` | Sections 2.4, 3.1, Figure 4 |
+| RQ1: where material goes | `src/linalg/coastal_release.py`, `connectivity.py` | `coastal_release_*`, `connectivity*`, `orange_basin_release.png` | Section 4.3, Figures 7–9, Table 4 |
+| RQ1: where it gathers | `src/linalg/long_run.py` | `long_run_*` | Section 4.4, Figure 10 |
+| RQ2: which estimator | `src/inference/evaluate.py`, `score_intervals.py`, `prior_sensitivity.py` | `evaluation_*`, `score_intervals*`, `prior_sensitivity*` | Section 4.1, Table 3 |
+| RQ2: reliability | `src/inference/bootstrap.py`, `calibration.py`, `year_intervals.py`, `interval_coverage.py`, `markov_check.py` | `calibration*`, `year_intervals_*`, `interval_coverage_*`, `markov_check*` | Section 4.2, Figures 5–6 |
+| RQ3: drogue status | `src/inference/drogue_comparison.py` | `drogue_comparison*` | Section 4.5, Figure 11, Table 5 |
+| RQ4: seasons | `src/forecasting/seasonal_forecast.py`, `seasonal_robustness.py`, `seasonal_matrices.py` | `seasonal_*` | Section 4.6, Figures 12–13 |
+| Robustness and a second region | `src/inference/robustness.py`, `region_swap.py` | `robustness*`, `region_swap*` | Section 4.7, Table 6 |
+| The app | `src/app/`, `app/` | `app/index.html`, `app_interval_check.csv` | Section 5.1 |
 
-[`project_plan.txt`](project_plan.txt) is the running record: what was done each week, the decision log (section 7) and the
-forensic review of the whole project (section 8), and the undrogued comparison and finishing the app (section 9). [`logs/ai_use_log.md`](logs/ai_use_log.md) records how AI was used and what
-was checked. [`docs/proposal/`](docs/proposal/) has the submitted proposal.
+Every figure caption in the report also names the script that made it.
+
+[`project_plan.txt`](project_plan.txt) is the running record of the project: weekly progress, the decision log (section 7),
+the forensic review (section 8), and the undrogued comparison and app finish (section 9). [`logs/ai_use_log.md`](logs/ai_use_log.md)
+records each AI session, what it produced and how we checked it. [`docs/proposal/`](docs/proposal/) has the submitted proposal.
 
 ## Limitations
 
@@ -148,7 +171,7 @@ was checked. [`docs/proposal/`](docs/proposal/) has the submitted proposal.
 
 ## Data and credit
 
-Hourly Global Drifter Program data, version 2.01 (Elipot et al. 2016, 2022;
+Hourly Global Drifter Program data, version 2.01 (Elipot et al. 2016, 2022,
 [doi:10.25921/x46c-3620](https://doi.org/10.25921/x46c-3620)), accessed through clouddrift. Region R: 42°S–4°S, 60°W–20°E,
 19,269,758 hourly readings from 1,975 drifters, September 1994 to October 2022, of which 1,892 drifters give the 776,777 usable
 15-day moves. Coastline: Natural Earth 1:110m (public domain).
