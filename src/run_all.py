@@ -63,10 +63,23 @@ FROM_TABLES = [
 ]
 
 
+# Steps in FROM_TABLES that still read the region and records caches (hourly readings, or lags longer than the
+# committed tables). Without the caches they write shorter or different files over the committed ones, so
+# --from-tables leaves them out and keeps the committed results. export_app_data reads calibration_tau15d.csv.
+NEEDS_CACHE_LATER = {
+    "src.inference.transition_adequacy",
+    "src.forecasting.seasonal_robustness",
+    "src.inference.calibration",
+    "src.inference.drogue_comparison",
+    "src.forecasting.seasonal_matrices",
+}
+
+
 def steps(from_tables=False):
     """The modules to run, in order."""
-    return FROM_TABLES if from_tables else NEEDS_CACHE + FROM_TABLES
-
+    if from_tables:
+        return [m for m in FROM_TABLES if m not in NEEDS_CACHE_LATER]
+    return NEEDS_CACHE + FROM_TABLES
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
