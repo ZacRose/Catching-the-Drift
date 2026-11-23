@@ -115,22 +115,19 @@ cells, numbered from the south-west corner, then "left the box" as the last stat
 ```bash
 conda env create -f environment.yml && conda activate DATA3001
 python3 -m pytest tests                  # 139 tests, about a minute (the app test needs Google Chrome)
-python3 -m src.run_all --from-tables     # everything from the committed tables, no internet needed
-python3 -m src.run_all                   # everything from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
+python3 -m src.run_all --from-tables     # 21 of the 35 steps from the committed tables, no internet needed
+python3 -m src.run_all                   # all 35 steps from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
 ```
 
 The environment uses Python 3.14, and the tests also pass on 3.11.
 
-Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the steps in the order they run.
-The full run took 50 minutes on a 10-core laptop once the cloud data was cached. Every script also runs on its own,
-and its docstring says what it reads and writes.
+Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the steps in the order they run. Every script also runs on its own, and its docstring says what it reads and writes.
 
-**Last full rerun:** [date], from a clean clone with `python3 -m src.run_all`. Every matrix and interval matched the committed
-outputs. Other differences were only line endings, floating-point rounding (at most 1e-9 relative) and figure rendering. The
-version submitted with the report is tagged `[tag name]`.
+`--from-tables` leaves out the 14 steps that need the hourly data (building the tables, the hourly EDA, and the checks that use the full drifter records or lags longer than 90 days) and keeps their committed results. The full run from the raw data takes about 1 hour 50 minutes on a 10-core laptop.
 
-The raw data are never changed: the GDP is read from the cloud with [clouddrift](https://github.com/Cloud-Drift/clouddrift)
-and region R is cached in `data/interim/` (not in git).
+**Last rerun:** 23 November 2026, from a clean clone of commit `5f77bd3` with `python3 -m src.run_all --from-tables`. All 21 steps ran in 2 hours 18 minutes on a 2-core laptop with 4 GB of memory. Of the 54 result and matrix files, 48 were identical to the committed ones and the other 6 differed only by floating-point rounding (below 1e-9 relative). The version submitted with the report is tagged `final-report`.
+
+The raw data are never changed: the GDP is read from the cloud with [clouddrift](https://github.com/Cloud-Drift/clouddrift) and region R is cached in `data/interim/` (not in git).
 
 To use another region, change the box in `config/region.yaml` (with its coastal zone and subregions) and rerun.
 `src/inference/region_swap.py` tests the quantitative half of this on a second box.
