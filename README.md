@@ -7,24 +7,14 @@ buoys, as a transition matrix that can be loaded and stepped forward, with its u
 **DATA3001, Term 3 2026.** Isaac Rose, Zhiru Lin (computational), Vidisha Trivedi, Liam Lightfoot (quantitative),
 Keyao Huang (business). Client: Shane Elipot, University of Miami.
 
-## Overview
+## Quick start
 
-### Quick start
+Open [`app/index.html`](app/index.html), the South Atlantic Gyre Drift Explorer, in any browser. It needs no
+installation, server or internet connection. Choose a start, a timeframe and, optionally, the drifter type and
+release season. The [app's README](app/README.md) explains how it works.
 
-Open [`app/index.html`](app/index.html), the South Atlantic Gyre Drift Explorer, in any browser to explore the
-results. It needs no installation, server or internet connection. Choose a start, a timeframe and, optionally, the
-drifter type and release season. The [app's README](app/README.md) explains how it works.
-
-To get the code, clone the repository or download the `final-report` release from the Releases page.
-
-To rerun the analysis (on Windows, use `python` in place of `python3`):
-
-```bash
-conda env create -f environment.yml && conda activate DATA3001
-python3 -m src.run_all --from-tables     # offline, from the committed transition tables
-```
-
-Full instructions are in [Reproducibility](#reproducibility).
+To get the code, clone the repository or download the `final-report` release from the Releases page. To rerun the
+analysis, see [Reproducibility](#reproducibility).
 
 ## Results
 
@@ -43,8 +33,7 @@ Material released along the Benguela coast moves offshore within weeks and then 
 - After a year, 77% (72–80) of material from the coast is in the Central South Atlantic and 15% (12–19) in the
   Tropical South Atlantic. It takes about 330 days for 1% of it to cross 30°W, into the western third of the box.
 - From the Orange Basin (the Venus and Mopane discovery blocks), 84% (80–87) is in the Central South Atlantic after
-  a year, and there is a 2.3% (0.8–3.9) chance it has reached the Benguela coastal cells. Drifters that run aground
-  stop reporting, so this is a lower bound.
+  a year, and there is a 2.3% (0.8–3.9) chance it has reached the Benguela coastal cells, a lower bound.
 - Material that stays in R gathers around 30.2°S, 16.4°W, with half of it in 11% of the box's area, whatever its
   release point. A coastal release loses any trace of its starting point after about 2.7 years.
 - In the long run, material leaves R slowly, at 0.25% per 15 days (0.22–0.29), mainly through the southern (0.14%)
@@ -54,8 +43,7 @@ Material released along the Benguela coast moves offshore within weeks and then 
 
 Shrinking thin 2° cells towards their 4° cell beats a fair baseline by 0.90 per move in held-out log-likelihood
 (0.83–0.98). Its gain over raw counts comes entirely from never giving a real move zero probability (raw counts do
-for 0.76% of test moves). Where raw counts can score, they are very slightly better. Checked on drifters the model
-never saw:
+for 0.76% of test moves). Where raw counts can score, they are very slightly better. On drifters the model never saw:
 
 - Predicted probabilities matched what test drifters did at every horizon. After a year, cells given about a 1.4%
   chance held test drifters 1.3% of the time.
@@ -70,16 +58,14 @@ never saw:
 
 Drogue status had the largest effect of anything we tested. Drifters that have lost their drogue are pushed by the
 wind as well as the current. From the coast, material carried by them is about 10° further west after a year
-(27.0°W against 16.8°W, gap 10.2°, 9.1–11.3) and 7–8 times as likely to have left the box (6.8%, 3.9–10.9, against
-0.89%). The main estimate pools both kinds of drifter, so it sits between water that follows the current and
-floating material exposed to the wind. Users should choose the matrix that matches the material they are modelling.
+(27.0°W against 16.8°W, gap 10.2°, 9.1–11.3) and 7–8 times as likely to have left the box (6.8%, 3.9–10.9). The main
+estimate pools both kinds of drifter, so it sits between water that follows the current and floating material
+exposed to the wind. Users should choose the matrix that matches the material they are modelling.
 
-The undrogued matrix is saved too. On held-out undrogued drifters it predicts no better than the pooled one at
-15 days, but better at 3 months and a year, and its 90% area holds what it should at a year (90%, against 85% for the
-pooled one). Its coastal intervals are too narrow, more so than the pooled ones. In a known-truth simulation, the
-interval on the one-year longitude held the true value 13% of the time (biased 1.3° east), so the westward shift is
-clear but its interval is a guide only. Undrogued drifters stand in for oil or debris on the strength of a handful
-of studies, and nothing here weathers or evaporates.
+On held-out undrogued drifters, the undrogued matrix predicts no better than the pooled one at 15 days, but better
+at 3 months and a year, and its 90% area holds what it should at a year (90%, against 85%). Its coastal intervals
+are too narrow: in a known-truth simulation, the interval on the one-year longitude held the true value 13% of the
+time (biased 1.3° east), so the westward shift is clear but its interval is a guide only.
 
 ### RQ4: Seasonality
 
@@ -90,29 +76,24 @@ summer and winter, against +24 km, −4 to +47, for drifters that follow the wat
 typical error in a season's drift from 33 km to 26 km (21.5% better, interval −0.4% to 39.8%), but one year can
 still differ a lot from the average, so we offer no validated seasonal forecast or risk window.
 
-The map can release in any season. When a release runs across seasons, the chain switches to each new season's
-matrix. On held-out drifters in other years this beats ignoring the season at every horizon tried, while keeping
-the release season's matrix throughout does worse than ignoring the season from about 6 months. The gain is real
-but small, about 0.4% per move, and a season's matrix keeps only about a third of the raw gap in westward drift.
-The rest does not recur from year to year at this level of detail. As a result, the seasons change the map little,
-and the centre after a year moves by 0.4° at most.
+When a release runs across seasons, the chain switches to each new season's matrix. On held-out drifters in other
+years this beats ignoring the season at every horizon tried, while keeping the release season's matrix throughout
+does worse than ignoring the season from about 6 months. The gain is small, about 0.4% per move, because a season's
+matrix keeps only about a third of the raw gap in westward drift. The rest does not recur from year to year. As a
+result, the centre after a year moves by 0.4° at most between release seasons.
 
 ## Uncertainty
 
-The 95% intervals reflect sampling variation between drifters only. They do not include how much the ocean changes
-from year to year. Resampling whole years instead barely widens the percentages (1.0–1.2 times) but widens the
-centre's longitude after a year by 2.1 times, and the long-run centre's latitude by 2.3 times.
+The 95% intervals reflect sampling variation between drifters only, not how much the ocean changes from year to
+year. Resampling whole years instead barely widens the percentages (1.0–1.2 times) but widens the centre's longitude
+after a year by 2.1 times, and the long-run centre's latitude by 2.3 times.
 
 In a simulation where the truth is known, 95% intervals held it about 92% of the time from well-sampled cells, 89%
 from cells with 10–99 drifters and 83% from cells with under 10. For the release from the whole Benguela coast,
 median coverage was only 75%, ranging from 22% to 100% across the 12 quantities. Its cells are thin, and shrinkage
 pulls them towards their 4° cell, which the bootstrap cannot detect. The 15-day coastal share comes out about
 4 points low (within 1 point with no shrinkage). Coastal numbers should therefore be read with their range across
-prior strengths as well as their interval: that share is 24–39% from a tenth to ten times the chosen alpha. The
-north-east of the box (Angola) is thin at every resolution.
-
-P is intended for planning over weeks to a year. It does not forecast conditions on a particular date and does not
-model how oil weathers.
+prior strengths as well as their interval: that share is 24–39% from a tenth to ten times the chosen alpha.
 
 ## Usage
 
@@ -145,42 +126,63 @@ Open Terminal in the repository folder:
 
 ```bash
 conda env create -f environment.yml && conda activate DATA3001
-python3 -m pytest tests                  # 139 tests, about a minute (one app test is skipped without Google Chrome)
+python3 -m pytest tests                  # 139 tests, about a minute
 python3 -m src.run_all --from-tables     # 21 of the 35 steps from the committed tables, no internet needed
-python3 -m src.run_all                   # all 35 steps from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
+python3 -m src.run_all                   # all 35 steps from the raw data (needs internet and about 3 GB of memory)
 ```
 
 ### Windows
 
-Open Anaconda Prompt (or a PowerShell terminal where conda works) in the repository folder. Use `python` in
-place of `python3`:
+Open Anaconda Prompt (or a PowerShell terminal where conda works) in the repository folder:
 
 ```powershell
 conda env create -f environment.yml
 conda activate DATA3001
-python -m pytest tests                   # 139 tests, about a minute (one app test is skipped without Google Chrome)
-python -m src.run_all --from-tables      # 21 of the 35 steps from the committed tables, no internet needed
-python -m src.run_all                    # all 35 steps from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
+python -m pytest tests
+python -m src.run_all --from-tables
+python -m src.run_all
+```
+
+### Troubleshooting
+
+If the tests fail with `ModuleNotFoundError` (for example `No module named 'clouddrift'`), the terminal is not using
+the environment's Python, even after `conda activate`. This can happen in VS Code's built-in terminal. Check which
+Python runs:
+
+```bash
+which python3                            # macOS and Linux, should end in envs/DATA3001/bin/python3
+```
+
+```powershell
+(Get-Command python).Source              # Windows, should end in envs\DATA3001\python.exe
+```
+
+If it points anywhere else, open a new terminal, or on macOS and Linux put the environment first on the path in the
+same terminal:
+
+```bash
+conda activate DATA3001
+export PATH="$CONDA_PREFIX/bin:$PATH"
+hash -r
+which python3
 ```
 
 ### Notes
 
-The environment uses Python 3.14, and the tests also pass on 3.11.
-
-Seeds are fixed, so a rerun gives the same numbers. `python3 -m src.run_all --list` shows the steps in the order
-they run. Every script also runs on its own, and its docstring says what it reads and writes.
+The environment uses Python 3.14, and the tests also pass on 3.11. Seeds are fixed, so a rerun gives the same
+numbers. `python3 -m src.run_all --list` shows the steps in the order they run, and every script also runs on its
+own, with a docstring saying what it reads and writes.
 
 `--from-tables` leaves out the 14 steps that need the hourly data (building the tables, the hourly EDA, and the
 checks that use the full drifter records or lags longer than 90 days) and keeps their committed results. The full
-run from the raw data takes about 1 hour 50 minutes on a 10-core laptop.
+run reads the GDP from the cloud once with [clouddrift](https://github.com/Cloud-Drift/clouddrift) (about
+10 minutes), caches region R in `data/interim/` (not in git) and takes about 1 hour 50 minutes on a 10-core laptop.
+The raw data are never changed.
 
 **Last rerun:** 23 November 2026, on Windows, from a clean clone of commit `5f77bd3` with
 `python -m src.run_all --from-tables`. All 21 steps ran in 2 hours 18 minutes on a 2-core laptop with 4 GB of
 memory. Of the 54 result and matrix files, 48 were identical to the committed ones and the other 6 differed only by
 floating-point rounding (below 1e-9 relative). The version submitted with the report is tagged `final-report`.
-
-The raw data are never changed. The GDP is read from the cloud with
-[clouddrift](https://github.com/Cloud-Drift/clouddrift) and region R is cached in `data/interim/` (not in git).
 
 To use another region, change the box in `config/region.yaml` (with its coastal zone and subregions) and rerun.
 `src/inference/region_swap.py` tests the quantitative half of this on a second box.
@@ -216,10 +218,12 @@ Every figure caption in the report also names the script that made it.
   better than fitting them directly), but real drifters keep moving in one direction for longer than the chain allows.
 - Leaving R is permanent in the matrix, yet about a fifth of the drifters that leave are back inside R at a later
   checkpoint.
-- Grounding is not in the main matrix, because grounded drifters stop reporting, so coastal numbers are lower
+- Grounding is not in the main matrix, because grounded drifters stop reporting, so coastal arrivals are lower
   bounds. The app's Groundings switch adds it as a second model.
-- Drifters seldom come close to shore. A coastal cell is about 200 km across, and the 9 sampled ones have 2–71
-  drifters each.
+- Drifters seldom come close to shore. A coastal cell is about 200 km across, the 9 sampled ones have 2–71 drifters
+  each, and the north-east of the box (Angola) is thin at every resolution.
+- Drifters stand in for oil or debris on the strength of a handful of studies, and nothing here weathers or
+  evaporates. P is for planning over weeks to a year, not for forecasting a particular date.
 - The data end in October 2022, and the main estimate pools all years and seasons.
 
 ## Data sources
