@@ -56,7 +56,7 @@ Outputs:
   grid metadata (transitions.save_grid_result), for the product and the 4 deg baseline;
 - outputs/figures/long_run_qsd.png.
 
-Run: python3 -m src.linalg.long_run   (about 6 minutes, mostly the 2 deg bootstrap; needs
+Run: python3 -m src.linalg.long_run   (about 4 minutes, mostly the 2 deg bootstrap; needs
 shrinkage_P_2deg_tau15d.npz)
 """
 import csv

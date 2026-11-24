@@ -18,15 +18,20 @@ A. Is there a seasonal signal? Per season, with drifter-bootstrap intervals (who
        coastal box (coastal_zone in config/region.yaml) and staying in R.
      - north_km: mean northward distance of the same moves.
      - exit_pct: share of all 15-day moves that leave R.
-   (Quantities per 15-day move. The scoping-note idea of "share leaving northward within tau" is
-   not usable: in the coastal cells no start leaves R within 15 days. See seasonal_signal.csv.)
+     - leave_north_pct: share of the same coastal moves that end north of the box. This is the
+       scoping note's "share leaving the coastal cells northward within tau", measured on the box.
+       It is rare, so it is in the tables and not the figures.
+   (Quantities per 15-day move.) Pairs of seasons are then compared by resampling whole season-years
+   (seasonal_signal_differences.csv), because drifters in the same year share that year's ocean.
 
 B. Can those quantities be forecast? Rolling origin (expanding window): the value for each
    season-year from FIRST_TEST_YEAR on is forecast using only earlier years, by four methods:
    annual mean (no season, the benchmark), seasonal mean, recency-weighted seasonal mean, and last
-   year's same season. Scored by MAE; skill = 1 - MAE / MAE of the benchmark, with an interval from
-   resampling whole test years (a year's four seasons are not independent). A season-year only
-   counts if at least MIN_DRIFTERS distinct drifters contribute (the adequacy idea, decision 3).
+   year's same season. The means pool earlier season-years by their moves, so a thin 1990s season
+   does not count as much as a season with 10,000 moves. Scored by MAE; skill = 1 - MAE / MAE of the
+   benchmark, with an interval from resampling whole test years (a year's four seasons are not
+   independent). A season-year only counts if at least MIN_DRIFTERS distinct drifters contribute
+   (the adequacy idea, decision 3).
 
 C. Can the whole 4 deg matrix be forecast? Same rolling origin, scored by the log-likelihood the
    forecast matrix gives to the observed moves of the test season. The seasonal matrix is the
@@ -41,11 +46,14 @@ D. What does the season change for the Benguela coast? Release material evenly o
    season, apply that season's matrix for the first 6 steps (about 3 months = one season), then
    the next seasons' matrices in turn out to 24 steps (about a year). Compared with the
    all-season matrix. Bootstrap intervals refit every matrix on drifters resampled with replacement.
+   Shrinkage sets how far a season's matrix can move from the all-season one, so the release is
+   repeated at other alphas (seasonal_release_alpha_sensitivity.csv).
 
 Outputs (outputs/results/ and outputs/figures/): seasonal_coverage.csv, seasonal_signal.csv,
-seasonal_forecast_scalar.csv, seasonal_forecast_scalar_detail.csv, seasonal_matrix_skill.csv,
-seasonal_release_tau15d.csv; seasonal_signal.png, seasonal_forecast_scalar.png,
-seasonal_matrix_skill.png, seasonal_release_3months.png.
+seasonal_signal_differences.csv, seasonal_forecast_scalar.csv, seasonal_forecast_scalar_detail.csv,
+seasonal_matrix_skill.csv, seasonal_release_tau15d.csv, seasonal_release_alpha_sensitivity.csv;
+seasonal_signal.png, seasonal_forecast_scalar.png, seasonal_matrix_skill.png,
+seasonal_release_3months.png.
 
 Run: python3 -m src.forecasting.seasonal_forecast            (about 1-2 minutes)
      python3 -m src.forecasting.seasonal_forecast --n-boot 200   (quicker, for a first look)
@@ -79,8 +87,10 @@ MIN_DRIFTERS = 15              # distinct drifters needed for a season-year valu
 MIN_SAME_SEASON = 2            # earlier years of the same season needed before forecasting it
 HALFLIFE = 3.0                 # years, recency weighting
 MIN_TEST_MOVES = 500           # a test season with fewer moves is skipped (matrix scoring)
-ALPHAS = (10, 50, 250, 1000)   # pseudo-moves of annual prior, matrix forecast
+ALPHAS = (10, 50, 250, 1000, 2000, 5000)   # pseudo-moves of annual prior, matrix forecast (the gain peaks inside this range)
 ALPHA_RELEASE = 20             # light shrinkage for the descriptive release maps (all years, no forecasting)
+ALPHA_RELEASE_CHECKS = (250, 1000)   # the release repeated with heavier shrinkage
+SEASON_PAIRS = ((0, 1), (0, 2), (3, 0), (1, 2), (3, 1), (3, 2))   # (a, b) for "a minus b", as indices into SEASONS
 EPS = 1e-3                     # probability floor mixed into forecast matrices before taking logs
 N_BOOT = 1000
 SEED = 3001
@@ -88,7 +98,7 @@ LEVEL = 95
 
 BENCH = "Annual mean (benchmark)"
 METHODS = (BENCH, "Seasonal mean", "Recency-weighted seasonal mean", "Last year's season (naive)")
-TARGETS = {
+TARGETS = {                    # the plotted targets; leave_north_pct is in the tables only
     "offshore_km": "Coastal offshore (westward) km per 15 d",
     "north_km": "Coastal northward km per 15 d",
     "exit_pct": "Moves leaving R (%), whole box",
@@ -131,6 +141,7 @@ def load_table(path=TABLE_PATH, region=None):
     zone = region["coastal_zone"]
     t["in_band"] = ((t["start_lat"] >= zone["lat_min"]) & (t["start_lat"] <= zone["lat_max"])
                     & (t["start_lon"] >= zone["lon_min"]) & (t["start_lon"] <= zone["lon_max"]))
+    t["north_of_band"] = t["in_band"] & (t["end_lat"] > zone["lat_max"])   # False for exits (no end position)
 
     t["start"], n_lat, n_lon = cell_index(t["start_lon"], t["start_lat"], region, CELL_SIZE)
     t["n_cells"] = n_lat * n_lon
@@ -180,6 +191,7 @@ def target_values(t):
         "offshore_km": (-t["east_km"], band_stay),
         "north_km": (t["north_km"], band_stay),
         "exit_pct": (100.0 * t["exited"], np.ones_like(t["exited"])),
+        "leave_north_pct": (100.0 * t["north_of_band"], band_stay),
     }
 
 
@@ -192,13 +204,14 @@ def group_rows(t):
 
 
 def season_year_series(values, mask, t, groups, min_drifters=MIN_DRIFTERS):
-    """{(season-year, season): mean value} for season-years with enough distinct drifters."""
-    out = {}
+    """({(season-year, season): mean value}, {same keys: moves}) for season-years with enough distinct drifters."""
+    out, moves = {}, {}
     for k, rows in groups.items():
         rows = rows[mask[rows]]
         if rows.size and np.unique(t["rank"][rows]).size >= min_drifters:
             out[k] = float(values[rows].mean())
-    return out
+            moves[k] = int(rows.size)
+    return out, moves
 
 
 # ----------------------------------------------------------------------------- part A
@@ -219,13 +232,44 @@ def coverage_table(t, groups):
         band = idx[t["in_band"][idx]]
         rows.append({"season_year": y, "season": SEASONS[s], "moves": idx.size,
                      "drifters": int(np.unique(t["rank"][idx]).size), "coastal_moves": band.size,
-                     "coastal_drifters": int(np.unique(t["rank"][band]).size)})
+                     "coastal_drifters": int(np.unique(t["rank"][band]).size),
+                     "exits": int(t["exited"][idx].sum())})
+    return rows
+
+
+def season_differences(t, groups, n_boot, rng):
+    """Differences between seasons' pooled means, with intervals from resampling whole season-years.
+
+    Wider than the per-season drifter bootstrap, because it includes how much a season changes from year to year.
+    years_higher counts the years the first season is higher, of the years where both pass MIN_DRIFTERS.
+    """
+    years = np.unique(t["syear"])
+    draws = rng.integers(0, years.size, (n_boot, years.size))
+    rows = []
+    for name, (values, mask) in target_values(t).items():
+        at = (np.searchsorted(years, t["syear"][mask]), t["season"][mask])
+        sums, counts = np.zeros((years.size, 4)), np.zeros((years.size, 4))
+        np.add.at(sums, at, values[mask])
+        np.add.at(counts, at, 1)
+        pooled = sums.sum(axis=0) / counts.sum(axis=0)
+        boot = sums[draws].sum(axis=1) / counts[draws].sum(axis=1)
+        series, _ = season_year_series(values, mask, t, groups)
+        for a, b in SEASON_PAIRS:
+            lo, hi = np.percentile(boot[:, a] - boot[:, b], [(100 - LEVEL) / 2, 100 - (100 - LEVEL) / 2])
+            both = [y for y, s in series if s == a and (y, b) in series]
+            rows.append(_round({"quantity": name, "season": SEASONS[a], "minus": SEASONS[b],
+                                "difference": pooled[a] - pooled[b], "ci_low": lo, "ci_high": hi,
+                                "years_higher": sum(series[(y, a)] > series[(y, b)] for y in both),
+                                "years_compared": len(both)}))
     return rows
 
 
 # ----------------------------------------------------------------------------- part B
-def rolling_forecasts(series, first_test_year=FIRST_TEST_YEAR, halflife=HALFLIFE):
-    """One row per forecastable season-year: truth and each method's forecast, using only earlier years."""
+def rolling_forecasts(series, first_test_year=FIRST_TEST_YEAR, halflife=HALFLIFE, moves=None):
+    """One row per forecastable season-year: truth and each method's forecast, using only earlier years.
+
+    The means weight earlier season-years by their moves; with moves=None each season-year counts equally.
+    """
     rows = []
     for (year, s), truth in sorted(series.items()):
         if year < first_test_year:
@@ -236,11 +280,13 @@ def rolling_forecasts(series, first_test_year=FIRST_TEST_YEAR, halflife=HALFLIFE
             continue
         years_same = np.array([y for y, _ in same], float)
         vals_same = np.array([v for _, v in same])
+        w_prior = [1.0 if moves is None else moves[k] for k in prior]
+        w_same = np.array([1.0 if moves is None else moves[(y, s)] for y, _ in same])
         rows.append({
             "season_year": year, "season": s, "truth": truth,
-            BENCH: float(np.mean(list(prior.values()))),
-            "Seasonal mean": float(vals_same.mean()),
-            "Recency-weighted seasonal mean": float(np.average(vals_same, weights=0.5 ** ((year - years_same) / halflife))),
+            BENCH: float(np.average(list(prior.values()), weights=w_prior)),
+            "Seasonal mean": float(np.average(vals_same, weights=w_same)),
+            "Recency-weighted seasonal mean": float(np.average(vals_same, weights=w_same * 0.5 ** ((year - years_same) / halflife))),
             "Last year's season (naive)": float(vals_same[-1]),   # the latest earlier year that has this season
         })
     return rows
@@ -270,8 +316,8 @@ def skill_with_ci(rows, n_boot, rng):
 def scalar_forecasts(t, groups, n_boot, rng):
     skill_rows, detail_rows, details = [], [], {}
     for name, (values, mask) in target_values(t).items():
-        series = season_year_series(values, mask, t, groups)
-        rows = rolling_forecasts(series)
+        series, moves = season_year_series(values, mask, t, groups)
+        rows = rolling_forecasts(series, moves=moves)
         details[name] = rows
         for r in skill_with_ci(rows, n_boot, rng):
             skill_rows.append(_round({"target": name, **r}))
@@ -379,17 +425,17 @@ def release_quantities(dist, zone, region):
             "centre_lat": lat, "centre_lon": lon}
 
 
-def release_run(season_counts_by_season, release, zone, region):
+def release_run(season_counts_by_season, release, zone, region, alpha=ALPHA_RELEASE):
     """{label: {steps: dist}} for each release season and for the all-season matrix."""
     total = sum(season_counts_by_season)
     G = empirical_P(total)
-    P_s = [shrink(c, G, ALPHA_RELEASE) for c in season_counts_by_season]
+    P_s = [shrink(c, G, alpha) for c in season_counts_by_season]
     out = {SEASONS[s]: propagate_cycle(P_s, s, release) for s in range(4)}
     out["All seasons"] = propagate_cycle([G] * 4, 0, release)
     return out
 
 
-def release_table(t, region, n_boot, rng):
+def release_table(t, region, n_boot, rng, alpha=ALPHA_RELEASE):
     release, zone = load_coastal_cells()
     S = t["n_cells"] + 1
     pair = t["start"] * S + t["end"]
@@ -400,7 +446,7 @@ def release_table(t, region, n_boot, rng):
         return [np.bincount(pair[idx], weights=w[idx], minlength=S * S).reshape(S, S) for idx in by_season]
 
     def quantities(weights):
-        runs = release_run(counts_for(weights), release, zone, region)
+        runs = release_run(counts_for(weights), release, zone, region, alpha)
         q = {(lab, k): release_quantities(d, zone, region) for lab, dd in runs.items() for k, d in dd.items()}
         for lab in SEASONS:                                   # season minus all-season, paired within a replicate
             for k in RELEASE_STEPS:
@@ -418,7 +464,7 @@ def release_table(t, region, n_boot, rng):
             rows.append(_round({"release_season": lab, "steps": k, "days": 15 * k, "quantity": name,
                                 "estimate": est, "ci_low": lo, "ci_high": hi}))
             summary[(lab, k, name)] = (est, lo, hi)
-    dists = release_run(counts_for(np.ones(t["n_drifters"])), release, zone, region)
+    dists = release_run(counts_for(np.ones(t["n_drifters"])), release, zone, region, alpha)
     return rows, dists, release, summary
 
 
@@ -446,15 +492,27 @@ def plot_signal(rows, path):
     plt.close(fig)
 
 
+def broken_at_gaps(x, y, longest=0.25):
+    """x and y with a NaN wherever the next season is missing, so a line doesn't run across years with no forecast."""
+    xs, ys = [x[0]], [y[0]]
+    for a, b, v in zip(x[:-1], x[1:], y[1:]):
+        if b - a > longest + 1e-9:
+            xs.append(np.nan)
+            ys.append(np.nan)
+        xs.append(b)
+        ys.append(v)
+    return xs, ys
+
+
 def plot_scalar(details, skill_rows, path):
     fig, axes = plt.subplots(2, 3, figsize=(14, 7), layout="constrained")
     for col, (name, title) in enumerate(TARGETS.items()):
         rows = details[name]
         x = [r["season_year"] + r["season"] / 4 for r in rows]
         ax = axes[0, col]
-        ax.plot(x, [r["truth"] for r in rows], "k-o", ms=3, label="Actual")
-        ax.plot(x, [r["Seasonal mean"] for r in rows], "--", color=BLUE, label="Seasonal mean forecast")
-        ax.plot(x, [r[BENCH] for r in rows], ":", color=ORANGE, label="Annual mean (benchmark)")
+        ax.plot(*broken_at_gaps(x, [r["truth"] for r in rows]), "k-o", ms=3, label="Actual")
+        ax.plot(*broken_at_gaps(x, [r["Seasonal mean"] for r in rows]), "--", color=BLUE, label="Seasonal mean forecast")
+        ax.plot(*broken_at_gaps(x, [r[BENCH] for r in rows]), ":", color=ORANGE, label="Annual mean (benchmark)")
         ax.set_title(title, fontsize=10)
         ax.set_xlabel("Season-year")
         if col == 0:
@@ -464,8 +522,11 @@ def plot_scalar(details, skill_rows, path):
         axes[1, col].barh([r["method"] for r in sk], y,
                           xerr=[y - [r["ci_low"] for r in sk], [r["ci_high"] for r in sk] - y], capsize=3, color=BLUE)
         axes[1, col].axvline(0, color="k", lw=1)
-        axes[1, col].set_xlabel("Skill vs annual mean (>0: season helps)")
-    fig.savefig(path, dpi=200)
+        axes[1, col].set_xlabel("Skill vs annual mean")
+    fig.text(0.01, -0.03, "Top: each season-year's value and the forecasts made from earlier years only; lines break where a season has too few drifters. "
+             "Bottom: skill = 1 - MAE / MAE of the annual mean, so above 0 the method beats ignoring the season.\n"
+             f"Bars: {LEVEL}% intervals from resampling whole test years.", fontsize=9)
+    fig.savefig(path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -529,6 +590,8 @@ def main(n_boot=N_BOOT):
     print("\nA. Seasonal signal (estimate [95% CI])")
     for r in signal:
         print(f"  {r['quantity']:12s} {r['season']}  {r['estimate']:8.3f} [{r['ci_low']:.3f}, {r['ci_high']:.3f}]")
+    print(f"  Coastal box: {t['north_of_band'].sum():,} of {(t['in_band'] & ~t['exited']).sum():,} moves end north of it, "
+          f"from {np.unique(t['rank'][t['north_of_band']]).size} drifters; {(t['in_band'] & t['exited']).sum()} leave R")
 
     skill, detail, details = scalar_forecasts(t, groups, n_boot, rng)
     write_csv(res_path("seasonal_forecast_scalar.csv"), skill)
@@ -557,6 +620,22 @@ def main(n_boot=N_BOOT):
         print(f"  {lab:11s} left R {e['pct_left_R'][0]:.2f}% | coastal zone {e['pct_in_coastal_zone'][0]:.2f}% "
               f"[{e['pct_in_coastal_zone'][1]:.2f}, {e['pct_in_coastal_zone'][2]:.2f}] | "
               f"centre {e['centre_lat'][0]:.1f}, {e['centre_lon'][0]:.1f}")
+
+    sensitivity = [{"alpha": ALPHA_RELEASE, **r} for r in rel]
+    for a in ALPHA_RELEASE_CHECKS:
+        sensitivity += [{"alpha": a, **r} for r in release_table(t, region, n_boot, rng, alpha=a)[0]]
+    write_csv(res_path("seasonal_release_alpha_sensitivity.csv"), sensitivity)
+    print("\nD. DJF minus all seasons in the coastal zone after 3 months, by alpha")
+    for r in sensitivity:
+        if r["release_season"] == "DJF minus all seasons" and r["steps"] == 6 and r["quantity"] == "pct_in_coastal_zone":
+            print(f"  alpha {r['alpha']:5d}  {r['estimate']:+.3f} [{r['ci_low']:+.3f}, {r['ci_high']:+.3f}]")
+
+    diffs = season_differences(t, groups, n_boot, rng)
+    write_csv(res_path("seasonal_signal_differences.csv"), diffs)
+    print("\nA. Differences between seasons, resampling whole season-years")
+    for r in diffs:
+        print(f"  {r['quantity']:15s} {r['season']} - {r['minus']}  {r['difference']:+8.3f} [{r['ci_low']:+.3f}, {r['ci_high']:+.3f}]"
+              f"  higher in {r['years_higher']} of {r['years_compared']} years")
     print(f"\nSaved tables to {RESULTS_DIR} and figures to {FIGURES_DIR}")
 
 

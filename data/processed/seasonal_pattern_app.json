@@ -1,0 +1,7 @@
+{
+ "summary": "Material starting in the Benguela zone drifts further west in summer and spring (about 120 km per 15 days) than in winter (about 70 km), and summer beat winter in 8 of the 8 years with enough drifters to compare.",
+ "notes": [
+  "The pattern is mainly in drifters that have lost their drogue, which the wind pushes directly: +83 km between summer and winter, against +24 km for drifters that follow the water, whose range (-4 to +47 km) includes no difference.",
+  "This is a typical pattern, not a forecast for a particular date. Knowing the season cuts the typical error in a season's westward drift from 33 km to 26 km, so one year can still differ a lot from the average."
+ ]
+}

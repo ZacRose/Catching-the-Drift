@@ -274,3 +274,132 @@ One entry per session: what was asked, what the AI produced, and what we checked
   - Headless Chrome: the page's maths against Python for both models, a scripted run through the whole user flow (no errors), no console errors on six pages, and screenshots at desktop and phone width.
   - 68 tests pass.
 - **Note for the report:** the app's numbers are the full-data fit and the bootstrap gives the intervals only; this is not bagging, though the bagged means are reported in the check CSV.
+
+## 2026-11-05 - Review and correction of the Week 6-8 Business seasonal forecast (Claude Code)
+- **Asked (Zac):** go through pull request #14 (Michelle's seasonal forecast) and say whether it belongs in the app, then correct the five claims the review flagged and update this log and the plan.
+- **Found:** the code ran and reproduced its outputs, and its main conclusion held (seasonal differences are real, but there is no validated forecast). Five claims in the plan did not match the numbers:
+  - "Recency weighting is the only method that clearly beats the benchmark (28%)" and "exit rate falls over the years". The benchmark gave every season-year equal weight, so 1994-2002 (13 of 93 season-years, 2.3% of moves, a 3.7% exit rate) inflated it.
+  - "Seasonal matrices do not beat the annual matrix at any alpha tried". The first table already showed a gain at alpha 1000, and the alphas stopped short of the peak.
+  - The scoping-note target "is not usable: no coastal start leaves R in 15 days". The note asked about leaving the coastal cells, not R.
+  - "Only DJF release clearly differs (about 0.9% reach the coastal zone)". The number depends on alpha, the material starts in the zone, and "only DJF" holds just for this measure at 3 months.
+  - "Northward distance is highest in SON" was presented as a clear signal, but SON is not clearly above JJA.
+- **Changed (branch `week9-seasonal-corrections`):**
+  - `src/forecasting/seasonal_forecast.py`:
+    - the annual, seasonal and recency-weighted means now weight earlier season-years by their moves;
+    - alphas 2000 and 5000 added;
+    - a new `leave_north_pct` target;
+    - `season_differences()`, writing `seasonal_signal_differences.csv`;
+    - the release repeated at alpha 250 and 1000, writing `seasonal_release_alpha_sensitivity.csv`;
+    - an `exits` column in `seasonal_coverage.csv`.
+  - `tests/test_business_week7.py`: 4 new tests (11 in the file).
+  - The `seasonal_*.csv` outputs and two figures (`seasonal_forecast_scalar.png`, `seasonal_matrix_skill.png`) regenerated. The other two figures were kept, because their data did not change.
+  - The plan's Business block rewritten, with a "Corrections" note listing what the first version said and why it changed.
+- **What changed in the results:**
+  - exit-rate skill of the recency-weighted seasonal mean: 28% to 2.6% (-8.7% to 12.8%);
+  - offshore skill of the seasonal mean: 17.5% to 21.5% (-0.4% to 39.8%);
+  - whole matrix: a gain peaking at +0.0029 per move at alpha 2000 (0.0021 to 0.0037), about 0.3%;
+  - DJF still in the coastal zone after 3 months: 0.9% at alpha 20, 1.5% at 250, 2.2% at 1000, against 2.96% for all seasons;
+  - leaving the coastal box northward: 441 of 73,897 moves (0.6%), from 37 drifters, with no forecast skill (-6.1%).
+- **AI's choices (for the team to confirm):**
+  - weighting all three pooled means by moves, not only the benchmark, so the comparison stays fair (the recency weight is moves times the decay);
+  - measuring the scoping note's target on the coastal box rather than the coastal cells;
+  - keeping alpha 20 as the main release table and reporting 250 and 1000 beside it, rather than changing it;
+  - describing the matrix gain as "too small to be useful".
+- **Checked:**
+  - 79 tests pass (75 before these changes).
+  - Two runs give byte-identical CSVs.
+  - Part A's rows for the original three targets are identical to the first version, as are Part C's estimates at the original alphas and Part D's estimates. Part D's intervals moved slightly, because the new alphas use more of the same random stream.
+  - The all-season release still matches `coastal_release_tau15d.csv` (one value differs in the fourth decimal place, from rounding).
+  - The plan's numbers were read from the regenerated CSVs, and the exit rates by period from the new `exits` column.
+  - One-off checks, not in the repo:
+    - the offshore difference holds with fixed 2 deg start-cell weights (DJF minus JJA +52 km, 36 to 75);
+    - the matrix test on the app's 2 deg grid also peaks at about +0.3% at alpha 2000, and is 6.7% worse than annual at alpha 50. It used the plain annual matrix as its baseline, not the product.
+- **Advice on the app (not built):** don't add the forecast or a season switch on the map, because there is no forecast beyond the average of past seasons, the 2 deg data can't support one (5 of the 9 coastal cells with drifters have none in DJF), and it would barely change the map. A small "Seasons" panel showing the offshore pattern is worth adding.
+- **Still to verify by the team:**
+  - Michelle to review these corrections, since they change results from Michelle's analysis.
+  - Michelle to add a log entry for the original Week 6-8 work, which the plan says used AI but this log does not cover.
+  - `matrix_skill` and `release_table` still have no tests, and the forecast figure still clips labels and joins lines across missing years.
+
+## 2026-11-05 - Forensic review of the whole project (Claude Code)
+- **Asked (Zac):** read the entire code base and make sure this is an exemplar of the highest calibre, leaving the report to the team, without breaking anything, and add any forensic decisions to the plan. Before that: is this robust enough to hand in, and do we need to check things like drifter velocity?
+- **Read:** every script, test and config file, the app, the plan, the docs and the submitted proposal, which was compared line by line with what exists.
+- **Found:**
+  - The whole-coast 95% intervals are too narrow: in a known-truth simulation they held the truth about 75% of the time (53% for the 15-day coastal share, biased 3.9 points low by shrinkage), against about 92% for well-sampled cells (decision 19).
+  - Proposal commitments that were missing: RQ1's "which subregions supply which others" and "where it leaves", O2's Orange Basin release, the 4 deg product loader, and the README (title-only since Week 4).
+  - Velocity: Week 2 checked only reported velocities. Positions imply 143 impossible hourly jumps, but they change the results only in the third or fourth significant figure (decision 12).
+  - The seasonal signal had never been tested against drogue status, and is mainly in undrogued drifters.
+  - Exits: "chaining overstates exits (3 points at 90 days)" mixed two meanings of "left". A fair test shows a real but different gap: 1.5 times too high at a year.
+  - Open issues e and f, and two "double check" notes in the decision log, still open.
+- **Added (branch `week9-seasonal-corrections`):**
+  - `src/inference/data_forensics.py`: positions against velocities, drogue flags, the decision 8 evidence, exit edges.
+  - `src/linalg/connectivity.py`, with subregions and named releases in `config/region.yaml`: RQ1 and the Orange Basin.
+  - `src/inference/calibration.py`: are the probabilities and the app's 50%/90% lines true on held-out drifters?
+  - `src/inference/year_intervals.py`: whole-year intervals, and does the past predict later years?
+  - `src/inference/interval_coverage.py`: do the intervals contain a known truth?
+  - `src/forecasting/seasonal_robustness.py`: each seasonal choice changed in turn, and the data for the app's Seasons view.
+  - `src/run_all.py`, `README.md`, `tests/test_forensic_week9.py`, 3 tests for the matrix forecast.
+  - The app: the placeholder tab became a Seasons view, and "How to read this" gained "How far to trust it", quoting the checks. The exporter reads those numbers from the results, so they can't drift.
+  - The plan: decisions 12-18, section 8, corrected status lines.
+- **AI's choices (for the team to confirm):** the subregion boxes; the Orange Basin cell (block numbers read as degrees; published well coordinates weren't found); the 15-day block in the simulation; the split year 2015; no forecast and no season switch in the app (decision 16); keeping the drifter bootstrap as the main interval (decision 17); keeping P's exit state and reporting its bias rather than changing it (decision 18); quoting coastal numbers with their prior range rather than bias-correcting them (decision 19); the 19 deg coast angle.
+- **Mistakes the AI made and corrected, for the critical reflection:**
+  - The first interval simulation walked synthetic drifters from their first position. They rarely reached the coast, whose cells then fell back on the prior twice, giving about 20-70% coverage there. That was the simulation's fault, not the intervals', and it was thrown away for one that keeps the real design. Had the result been accepted, it would have wrongly condemned the intervals.
+  - Told Zac the exit over-prediction was "mostly definitional" before testing it. The Kaplan-Meier test showed part of it was real.
+  - Wrote three tests that couldn't fail (an `or True`, a dead branch, and two identical calls compared), caught on rereading. The leak test now also checks that the same moves placed earlier do change the scores.
+  - Wrote "reach South America" in the README for what the subregion's edge at 30W actually measures.
+  - Described `HALFLIFE` and the others as AI choices without knowing who chose them.
+- **Checked:**
+  - The whole pipeline, run from a clean copy with `src.run_all` (35 minutes), then compared file by file with the outputs from before this review: 38 byte-identical, and the other 26 explained (line endings; floating-point rounding of at most 1e-9 relative; figure rendering; the app's new Seasons block). P and every app interval are identical.
+  - 116 tests pass.
+  - The clean environment: `environment.yml` builds, and all tests pass, on Python 3.14 as well as 3.11.
+  - Decision 8's numbers reproduce exactly from the caches.
+  - New functions have tests with answers worked by hand, including a Kaplan-Meier case that differs from the naive share.
+  - The app in headless Chrome: the page's maths against Python, screenshots of both views at desktop and a true 390 px width, and no console errors on four views. Looking at the screenshots found double bullets, a clipped label and leftover controls in the first Seasons view, all fixed.
+- **One-off checks, not in the repo:** the 2 deg matrix test behind decision 16; the fixed start-cell weights for the offshore gap (+52 km, 36 to 75).
+- **Not done:** the cloud extract wasn't re-timed (it reads about 16 GB); literature wasn't checked; no decision was made on the team's behalf about their "to confirm" lists.
+
+## 2026-11-05 - The undrogued comparison and finishing the app (Claude Code)
+- **Asked (Zac):** on a new branch that keeps everything from the last one, for the team to review separately: (1) earlier we meant to compare all drifters with undrogued drifters only, from memory because undrogued drifters are a better analogue for oil; check whether it was done, and write the code if not; (2) the app: rename it South Atlantic Gyre Drift Explorer, add the undrogued / all toggle, add the seasonal analysis including what happens when a timeframe crosses seasons, and make it more rigorous and helpful, remembering that less is more.
+- **Read:** the plan's decisions 6, 6a, 13 and 16, `robustness.py`, `seasonal_robustness.py`, `seasonal_forecast.py`, the exporter, the page's code, and the outputs of the previous branch.
+- **Found:**
+  - The comparison was partly done. Week 8 reran the headline numbers by drifter type, but kept no matrix, had no fair interval on the gaps, and never tested whether the undrogued matrix predicts undrogued drifters better.
+  - The plan is more careful than Zac's memory, and the code follows it: undrogued drifters "arguably suit" floating material, on a handful of studies.
+  - The undrogued whole-coast ranges are too narrow, more so than the pooled ones (9-13% coverage for the centre's position at some horizons; plan, section 9). The gap between the sets is clear, but its range isn't a true 95%.
+  - Seasons barely move the map once shrunk enough to hold up in other years (at most 0.41 deg at a year), and keep only 34% (all) and 21% (undrogued) of the real summer-winter gap.
+- **Added (branch `week9-app-finalise`):**
+  - `src/inference/drogue_comparison.py`: the undrogued matrix and bootstrap, paired-draw gaps, the held-out test, calibration, a figure.
+  - `src/forecasting/seasonal_matrices.py`: seasonal matrices with beta chosen by leaving out whole years, the test of the crossing rule, a figure.
+  - `src/app/export_app_data.py`, `check_intervals.py`: both sets and the seasons, 16-bit intervals, "reached by then", brute-force checks of all of it.
+  - `src/inference/interval_coverage.py`: `--drifters`, restructured so both sets run the same way. `src/linalg/product.py`: `load_product(drifters=...)`, `forecast(season=...)`.
+  - The app: new title; step 3, "Under what conditions?"; the season strip; a comparison marker; "How far to trust this", "Reached by then", "Mostly in" and an Orange Basin start.
+  - `tests/test_drogue_season_week9.py` (22 tests), README, the plan's decisions 20-23 and section 9, and a corrected decision 16.
+- **AI's choices (for the team to confirm):** all drifters stays the main estimate and the page opens on it (decision 22); seasons shrunk to the all-year matrix, with beta from leaving out years (decision 20); each step uses the season it starts in, releases on a season's first day, a 360-day year (decision 21); 16-bit intervals, seasons at 200 replicates and 23 stored steps (decision 23); grounding chance kept all-year; what the page leaves out for clutter (exit edges, a prior-range display, more result rows, more overlays).
+- **Where the AI's advice was overruled:** the AI had advised against a season switch (decision 16). Zac asked for it. Building it showed the advice's evidence was mostly right, but also that the crossing rule could be properly tested, and it was one of the AI's numbers that was wrong (next point). Whether the switch earns its place is left to the team.
+- **Mistakes the AI made and corrected, for the critical reflection:**
+  - Decision 16 said a season would move the 3-month centre "about 1 deg". The real figure on the map's own matrix is at most 0.19 deg; the 1 deg came from a 4 deg release at alpha 20. An AI number was used as an argument without being checked on the right matrix.
+  - Run times estimated in the docstrings were far out (the interval check: 5 minutes estimated, 40 measured). All were replaced with measured ones.
+  - The first draft of the page's note on the simulation implied it covered seasonal ranges, which it doesn't; it now says "all-year 95% ranges". Also found by looking at the page: a hint too long, "Released" crowding its chips, and in the figures labels running over lines and past the panel edge.
+  - The interval check reported gaps up to 49% on the seasonal steps between stored ones. It was only understood by breaking the table down: the large ones are on numbers under 0.02%, and the median is 0.9% where the low end is at least 1%. It was not simply called rounding. Likewise the all-year 6.6e-4, larger than the 1.8e-4 rounding, was traced to values too small to show.
+- **Checked:**
+  - 138 tests pass, including the page against Python for both sets, models and seasons in headless Chrome.
+  - The coast release against the saved results, for both sets (largest difference 5e-5).
+  - `check_intervals.py`: the app's intervals against brute force on the same draws, on 704 all-year and 2,816 seasonal intervals.
+  - Rerunning `drogue_comparison` gave an identical CSV and matrix, and `interval_coverage --drifters all` gave the same table after being restructured. Every other existing output is unchanged except the app's data, its check and the Seasons text.
+  - The numbers in the plan and README were read back from the CSVs.
+- **One-off checks, not in the repo:**
+  - a two-scale prior with a 4 deg seasonal shift: test gain 0.00446 against 0.0041 (all), 0.00623 against 0.00566 (undrogued), so dropped (decision 20);
+  - the page's number against its shipped seasonal range, over every start, season, set, model, quantity and stored step: outside 8 times in about 1.2 million, allowing for rounding, never for a whole-coast release;
+  - which row gives the all-year 5.8e-4 gap: a value of 5.8e-7% stored as "too small", with every other row in that model within the 1.8e-4 rounding;
+  - which release cells have no moves in each season (5 of 9 in DJF; undrogued 5 of 8);
+  - every control clicked through on the real data in headless Chrome, including undrogued at the 3 cells with none, with no errors; screenshots at desktop and 390 px.
+- **Not done:** `src.run_all` wasn't run end to end again (each changed step was rerun in order, and its 1 hour 50 minutes is added up from them); the seasonal ranges have no known-truth simulation; the undrogued whole-coast ranges aren't corrected, only flagged; no literature was checked; nothing was pushed, and no decision was made for the team.
+
+## 2026-11-05 - Removing the app's tabs (Claude Code)
+- **Asked (Zac):** what is the point of the "Seasons: Through the year" tab, which doesn't fit with the rest of the app? If it should go, remove the "Drift explorer" button too, show that view directly, and keep the information button.
+- **AI's view:** remove it. It began as a placeholder for a seasonal forecast and became a fixed chart. It ignored the start, timeframe and switches, and it blanked the map. Once the map had a season switch, it was a second, disconnected answer to the same question. The one thing worth keeping is what the drifters themselves show, the real summer-winter gap, so that moved to the information panel.
+- **Mistake to note for the critical reflection:** when the AI added the season switch it kept this tab, and even added a button linking it to the map, rather than asking whether it still earned its place. It was Zac who asked, after the AI had listed the page as finished, under a brief that said less is more.
+- **Changed:** both tabs and their code removed from the page; the information button sits beside the title; `seasonal_robustness.py` writes only the text the panel shows (`seasonal_pattern_app.json`, replacing `seasonal_forecast_app.json`); a test that the page has no tabs and keeps its information button; decision 16, section 9, `app/README.md`.
+- **Checked:**
+  - 139 tests pass.
+  - The data file, compared block by block with the one before: P, the seasons and every interval are identical. Only the tab's block changed, so `check_intervals.py` wasn't rerun for this.
+  - `seasonal_robustness.csv` is unchanged.
+  - In headless Chrome on the real data: every remaining control clicked through with no errors, the information panel opens and quotes the pattern, an old link to the Seasons view opens the map, and screenshots at desktop and 390 px.

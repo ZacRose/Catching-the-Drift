@@ -17,3 +17,6 @@ venv/
 # OS / editor
 .DS_Store
 .vscode/
+
+# A local backup of the repository, not part of it
+*.bundle

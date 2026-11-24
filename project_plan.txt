@@ -13,24 +13,24 @@ docs/poster/DATA3001 Group 2 A1 Poster.png. The proposal's research
 questions, objectives and timeline (its sections 2 and 5) are what we committed to; Weeks 6-10
 below follow them.
 
-Where we are (2026-11-01, Week 8):
-- Done and on main: Weeks 1-6 Computational and Quantitative, the proposal, the poster and the
-  Week 4 release map (pull requests #9, #10 and #11). Peer review was submitted outside the repo.
-- Week 7 and Week 8 Quantitative: DONE 2026-11-01 together on branch week7-8-quant, built on
-  week7-comp (see "Week 7 status - Quantitative" and "Week 8 status - Quantitative" in section 5).
-  Week 7: Markov check, long-run pattern, mixing time, prior sensitivity, draft product. Week 8:
-  robustness across grids, lags, drogue status and years, and a region-swap check. This branch
-  replaces the older week7-quant branch, which the team agreed to set aside.
-- Week 7 Computational: done (see "Week 7 status - Computational" in section 5). The transition
-  table now exists at 5, 10, 15, 30, 60 and 90 days, checked three ways, with a summary of what
-  changes with the time step. On branch week7-comp, not yet committed or reviewed.
-- Week 6, 7, and 8 Business (RQ4 seasonal forecast): DONE. 
-- The team should check the choices flagged in the Week 6, 7 and 8 status blocks.
-- Poster fixes: no poster feedback has come back yet, so this part of Week 6 is still waiting.
+Where we are (2026-11-05, Week 9):
+- On main: Weeks 1-8 of every stream (pull requests up to #13), the Business seasonal forecast (#14) and
+  the app (#15). The proposal and poster are submitted.
+- On branch week9-seasonal-corrections, not yet reviewed: corrections to the seasonal write-up, and a
+  forensic review of the whole project against the proposal (section 8), which added the proposal's
+  missing RQ1 and Orange Basin results, reliability checks, the README and the app's Seasons view.
+- On branch week9-app-finalise, built on week9-seasonal-corrections and to be reviewed after it: the comparison
+  of all drifters with undrogued drifters only, and the finished app, now the South Atlantic Gyre Drift Explorer,
+  with drifter and season switches (section 9).
+- Still to do: the report (docs/report/ has only the background draft) and the presentation. Section 8
+  ends with the list of what needs people rather than code: the team's sign-offs, the literature checks
+  and the poster feedback.
+- The team should check the choices flagged in the Week 6, 7, 8 and 9 status blocks.
 
 Contents: Sections 1-4 outline what we are doing and who does what. Section 5 is the
 week-by-week plan and what has been done so far. Section 7 lists key decisions we have made and
-why.
+why. Section 8 is the forensic review of the whole project (2026-11-05). Section 9 is the undrogued
+comparison and finishing the app (2026-11-05).
 
 Key terms:
 - R: our region, the box in section 2.
@@ -190,7 +190,8 @@ Week 2 - Working data access and EDA. DONE
         (decision 6).
     (3) Speed outliers (max 3.37 m/s) are real: the fastest 0.1% sit in the Agulhas and the
         Brazil / Brazil-Malvinas currents, and are only slightly more likely to be undrogued
-        (72% vs 68%), so they are kept.
+        (72% vs 68%), so they are kept. (This judged the reported velocities. Section 8 checks the
+        positions against them, and decision 12 records what it found.)
     (4) A median-speed drogued drifter takes about 8 / 15 / 23 / 30 days to cross a
         1 / 2 / 3 / 4 deg cell north to south. This sets the smallest sensible lag for Week 3.
   - We kept only EDA that drives a decision (marking criteria). Dropped: velocity histograms and
@@ -346,7 +347,8 @@ Week 4 - Proposal/README due (15%).
      only. Both matter for the displacement EDA and the Week 8 drogue comparison; adding the
      columns means rebuilding the table.
   f. The evidence for decision 8 and the brute-force check lives in this file and the AI log,
-     not in code. If the proposal cites those numbers, put the checks in a script.
+     not in code. If the proposal cites those numbers, put the checks in a script. (Closed in section
+     8: data_forensics.py reproduces every number. Issue e is closed there too, as a stated limitation.)
 - Open issues from the 2026-10-03 review of the Week 3 Quantitative work:
   g. The persistence baseline is too easy to beat. Its best setting (eps = 0.7 at 2 deg) means
      "stay with 30% probability, otherwise jump anywhere in the box", which isn't really
@@ -586,8 +588,7 @@ Week 7 - Full model
 - Business: continue the seasonal forecast, including the train/test split.
 - Output: a draft product - P plus its uncertainty, in a form another analyst could pick up.
 
-Week 7 status - Computational DONE (2026-10-29, branch week7-comp; not yet committed or reviewed
-by the team)
+Week 7 status - Computational DONE (2026-10-29; on main since pull request #12)
 Run: python3 -m src.gridding.lags (2-3 minutes; needs the region and records caches in data/interim/).
 1. What was built: the Week 3 transition table at 5, 10, 30, 60 and 90 days, saved as
    data/processed/transitions_tau5d.npz, ..._tau90d.npz (about 11 MB each). They are made by the
@@ -673,8 +674,7 @@ logs/ai_use_log.md (week7-quant already conflicts with main in those two files; 
 cleanly). Keep both sides. Update 2026-11-01: week7-quant was set aside; week7-8-quant is built on
 top of this branch, so merging this branch and then week7-8-quant gives no conflicts.
 
-Week 7 status - Quantitative DONE (2026-11-01, branch week7-8-quant from week7-comp; not yet
-reviewed by the team)
+Week 7 status - Quantitative DONE (2026-11-01; on main since pull request #13)
 Run, after the Week 6 and Week 7 Computational scripts: python3 -m src.inference.markov_check
 (about 3 minutes), src.linalg.long_run (about 7 minutes, mostly the bootstrap), then
 src.inference.prior_sensitivity (10 seconds; it shades its figure with long_run's intervals).
@@ -700,12 +700,14 @@ there, and evaluate.py / score_intervals.py were rerun unchanged (identical resu
       - left the box: the chain over-states exits per cell by about 0.8 points at 30 days
         (2 deg: 6.0% vs 5.2%) and 2.8 points at 90 days (10.4% vs 7.6%). So the 1-year "left box"
         numbers from P^24 (coastal release 0.89%) are on the high side, which is the cautious
-        direction for a spill planner.
+        direction for a spill planner. (Section 8 measured this fairly: part of this gap is that P^k
+        means "has left" and the direct table "outside on that day". The rest is real.)
       - distance: at 4 deg the chain spreads material about 20 km (5%) too far (artificial
         dispersion, proposal section 2); at 2 deg it is within 3 km at 30 days and 24 km SHORT at
         90 days (real drifters keep going in one direction longer than a 15-day chain allows).
       - Re-entry explains little: 0.31% / 0.39% of starts are out of R at 15 days and back in by
-        30 / 90 days (decision 11b).
+        30 / 90 days (decision 11b). (Section 8: this is only those out at day 15, a lower bound. Of
+        test drifters out at any checkpoint, about a fifth are back in on the day, so it matters.)
       - Fitting each lag on its own starts instead (as the product is) makes the 90-day exit gap
         larger (2 deg: 3.1 points; 4 deg: 4.4), so matching the starts mattered.
    c. Not used: a split-half "noise floor" for the total variation. The chain is smoother than a
@@ -789,8 +791,7 @@ Week 8 - Robustness
 - Business: finish the seasonal forecasting story and plan how the report frames it.
 - Output: a robustness section showing results across several settings, not one.
 
-Week 8 status - Quantitative DONE (2026-11-01, branch week7-8-quant, with Week 7 Quantitative; not
-yet reviewed by the team)
+Week 8 status - Quantitative DONE (2026-11-01; on main since pull request #13)
 Run, after the Week 7 scripts: python3 -m src.inference.robustness (about 8 minutes), then
 src.inference.region_swap (seconds).
 1. Robustness (src/inference/robustness.py; outputs/results/robustness_tau15d.csv,
@@ -834,6 +835,8 @@ src.inference.region_swap (seconds).
      vs 0.89%, 0.61-1.5). Drogued-only (4 deg, 5% of cells adequate: indicative only) is slower
      (centre 6.2W after a year). So the product, which pools both, sits between "water" and
      "floating material". The report should say which one a user needs, and RQ3 has its answer.
+     (This reran the headline numbers only. Section 9 has the full comparison: a saved matrix, fair
+     intervals on the gaps and a test on held-out drifters. With 1000 replicates the 4.4-11.4 is 3.9-10.9.)
    - Years: 2010+ gives much the same picture, with two small shifts just outside the product's
      intervals: the long-run centre sits about 1 deg further west (2 deg 17.6W vs 16.4W, interval
      15.6-17.1W; 4 deg 19.5W vs 18.1W) and the 1-year release centre about 1.5 deg further east
@@ -871,42 +874,100 @@ For the team to confirm (the AI's choices; see the 2026-11-01 Week 8 AI log entr
   (3) drogue status at the start of each move (no end-of-move status, issue e);
   (4) the test box for the region swap.
 
-Week 6-8 status - Business DONE (2026-11-04; in the pull request, not yet reviewed)
-Run: python3 -m src.forecasting.seasonal_forecast (1-2 minutes; --n-boot 200 for a quick look)
-Reads data/processed/transitions_tau15d.npz, so no other code changes. Tests: tests/test_business_week7.py (7).
+Week 6-8 status - Business DONE (2026-11-04; on main since pull request #14; results corrected
+2026-11-05 on branch week9-seasonal-corrections, not yet reviewed; see "Corrections" below)
+Run: python3 -m src.forecasting.seasonal_forecast (under a minute; --n-boot 200 for a quick look), then
+src.forecasting.seasonal_robustness (under a minute), which changes each choice in turn.
+Reads data/processed/transitions_tau15d.npz, so no other code changes. Tests: tests/test_business_week7.py
+(14), and the seasonal part of tests/test_forensic_week9.py.
 Outputs: outputs/results/seasonal_*.csv, outputs/figures/seasonal_*.png.
 
 What it does (4 deg grid, seasons DJF/MAM/JJA/SON, December counts in the next year's DJF):
-A. Seasonal signal, with drifter-bootstrap intervals.
+A. Seasonal signal, with drifter-bootstrap intervals. Pairs of seasons are then compared by resampling
+   whole season-years (seasonal_signal_differences.csv).
 B. Rolling-origin forecasts from 2008, each using only earlier years, against an annual-mean
-   benchmark that ignores season. Season-years with fewer than 15 distinct drifters are skipped.
+   benchmark that ignores season. The means weight earlier season-years by their moves. Season-years
+   with fewer than 15 distinct drifters are skipped.
 C. The same rolling origin for the whole 4 deg matrix, scored by log-likelihood of the observed moves.
-D. Release from the Benguela coastal cells at the start of each season, 3 months and 1 year.
+D. Release from the Benguela coastal cells at the start of each season, 3 months and 1 year, repeated
+   with heavier shrinkage (seasonal_release_alpha_sensitivity.csv).
 
-Results:
-- Seasonal signal is clear in the coastal box: offshore (westward) distance per 15 days is lowest
-  in JJA (69 km vs 122 km in DJF and 123 km in SON); northward distance is highest in SON (82 km).
-- Forecasting is weaker: the seasonal mean beats the annual mean for offshore distance by
-  17.5%, but the interval includes zero; no real gain for northward distance.
-- Exit rate falls over the years more than it changes by season, so recency weighting is the
-  only method that clearly beats the benchmark (28%).
-- Whole-matrix forecast: negative result. Seasonal matrices do not beat the annual matrix at any
-  alpha tried (each season holds about a quarter of the data). To be reported as such.
-- Release: all-season 3-month numbers match coastal_release_tau15d.csv (0.37% left R, 2.96% in
-  the coastal zone). Only DJF release clearly differs (about 0.9% reach the coastal zone).
+Results (95% intervals in brackets):
+- Offshore seasonal signal is firm in the coastal box, but mainly for drifters the wind can push.
+  Offshore (westward) distance per 15 days is lowest in JJA (69 km vs 122 km in DJF and 123 km in SON).
+  Resampling whole season-years, DJF minus JJA is +53 km (31 to 76), with DJF higher in all 8 years that
+  can be compared. SON minus JJA is +53 km (34 to 74), with SON higher in 9 of 10.
+  Changing each choice in turn (seasonal_robustness.csv), DJF minus JJA stays +35 to +60 km and above zero:
+  the reported velocities instead of positions (+60), dropping the fastest 1% of moves (+51), parts of the
+  box (+35 to +58), the true offshore axis instead of due west (+54), 10 and 30-day moves (+54, +50), and
+  leaving out any one year (+45 to +58). Shuffling the seasons within years never made a gap this big in 5,000
+  tries. The exception is drifter type: undrogued only +83 km (57 to 109), drogued only +24 km (-4 to 47, only
+  3 years to compare). Reweighting the seasons to the same drogue mix leaves +56 km, so the mix doesn't
+  explain the signal; it is mainly in the wind-exposed drifters. Report it as a pattern for floating material
+  exposed to wind, smaller and unproven for water at drogue depth. That wind is the cause is plausible
+  (the southern Benguela's upwelling winds peak in spring and summer; find a source), but it isn't tested here.
+- Northward signal is weak. SON has the highest estimate (82 km) and is clearly above DJF (+32 km, 14
+  to 47) and MAM (+30 km, 11 to 47), but not JJA: +19 km (-1 to +39), higher in only 5 of 10 years. SON also
+  has the fewest drogued drifters (37% of moves, against 43-52%), and undrogued ones go much further north.
+- Forecasting is weaker: the seasonal mean beats the annual mean for offshore distance by 21.5%, but
+  the interval just includes zero (-0.4% to 39.8%). There is no real gain for northward distance (0.9%).
+  The gain is probably real: it stays +12% to +35% whatever the settings (MIN_DRIFTERS 5-20, FIRST_TEST_YEAR
+  2005-2015; RMSE agrees), and none of 2,000 shuffles of the seasons reached it (their 95th percentile is +3%).
+  But the typical error only falls from 33 km to 26 km, because one year can differ a lot from the average.
+  Drogued only, 11 forecasts can't say (-20%, -62% to +16%).
+- Exit rate: no method clearly beats the benchmark (seasonal mean 2.5%, -0.9% to 6.2%; recency-weighted
+  seasonal mean 2.6%, -8.7% to 12.8%). The rate is 3.7% in the thin years 1994-2002 (2.3% of moves),
+  then 1.50% in 2003-2007, 1.67% in 2008-2014 and 1.24% in 2015-2022, so there is no steady fall.
+- Whole-matrix forecast: a small real gain, only with heavy shrinkage. Seasonal matrices do worse than
+  the annual matrix up to alpha 250 (-0.0422 per move at alpha 10, -0.0077 at 250; each season holds
+  about a quarter of the data) and better from alpha 1000. The gain peaks at alpha 2000 (+0.0029, 0.0021
+  to 0.0037), about 0.3% better likelihood per move. That peak was read from the test years, so it is
+  slightly optimistic. To be reported as a real gain that is too small to be useful.
+- Release: all-season 3-month numbers match coastal_release_tau15d.csv (0.37% left R, 2.96% in the
+  coastal zone). After 3 months, less DJF-released material is still in the coastal zone than under the
+  all-season matrix, at every alpha tried. The size depends on the shrinkage: 0.9% at alpha 20 (the
+  main table), 1.5% at 250 and 2.2% at 1000, partly because heavier shrinkage pulls every season towards
+  the all-season matrix. So quote the direction, not the number. On this measure only DJF clearly
+  differs at 3 months. After 1 year all four seasons differ from the all-season 0.06%, at small values
+  (0.02% to 0.16%).
+- Leaving the coastal box northward (the scoping note's measure, on the box rather than the cells):
+  441 of 73,897 moves (0.6%), from 37 drifters, and 0.36% to 0.94% by season. The seasonal mean does not
+  forecast it (-6.1%, -24.4% to 15.3%).
 
 For the team to confirm:
-1. FIRST_TEST_YEAR = 2008 and MIN_DRIFTERS = 15 are the AI's choices (data is thin before 2003).
-2. The scoping-note idea "share leaving northward within tau" is not usable: no coastal start leaves R in 15 days.
+1. FIRST_TEST_YEAR = 2008 and MIN_DRIFTERS = 15 are the AI's choices (data is thin before 2003). Also to
+   confirm, not listed before: HALFLIFE = 3 years, ALPHA_RELEASE = 20, EPS = 1e-3, MIN_TEST_MOVES = 500,
+   and (new) weighting season-years by their moves.
+2. The scoping-note idea "share leaving the coastal cells northward within tau" can be measured but is
+   too rare to forecast, so it is reported and not used as a main target.
 3. Because seasonal forecasts are not reliably better than the benchmark, the report should say seasonal
    differences are real but forecasting them is uncertain, not that a validated risk window exists.
 
-Week 9 status - App (2026-11-02, branch week9-app; not yet reviewed by the team; revised twice the
-same day after team feedback)
+Corrections (2026-11-05, Zac with Claude Code, after reviewing pull request #14; Michelle to review; see
+the AI log). What the first version of this block said, and why it changed:
+- "Recency weighting is the only method that clearly beats the benchmark (28%)" and "exit rate falls
+  over the years": the benchmark gave every season-year equal weight, so 1994-2002 (13 of 93
+  season-years, 2.3% of moves) inflated it. Weighting by moves gives 2.6%. The offshore 17.5% became
+  21.5% for the same reason.
+- "Seasonal matrices do not beat the annual matrix at any alpha tried": the first table already showed
+  a gain at alpha 1000 (+0.0015). Alphas 2000 and 5000 were added, which show the peak.
+- "Only DJF release clearly differs (about 0.9% reach the coastal zone)": 0.9% depends on alpha; the
+  material starts in the zone, so it is "still in", not "reach"; and "only DJF" holds just for this
+  measure at 3 months.
+- "Northward distance is highest in SON": still the highest estimate, but not clearly above JJA.
+- "Not usable: no coastal start leaves R in 15 days": true (0 starts), but the scoping note asked about
+  leaving the coastal cells, not R. The target was still dropped, because it is too rare.
+Part D's intervals moved slightly because the new alphas use more of the same random stream; its
+estimates did not change.
+
+Week 9 status - App (2026-11-02, revised twice the same day after team feedback; on main since pull
+request #15; Seasons view and trust notes added 2026-11-05, see section 8; renamed the South Atlantic
+Gyre Drift Explorer, with drifter and season switches and without the Seasons view, 2026-11-05, see section 9)
 An interactive front end for the product: app/index.html (open by double-clicking; any browser, no
-Python, server or internet). Data: python3 -m src.app.export_app_data (about 5 minutes, after
-src.inference.shrinkage_fit), then python3 -m src.app.check_intervals (about 2 minutes). No existing
-file or output was changed.
+Python, server or internet). Data: python3 -m src.app.export_app_data (about 25 minutes, after
+src.inference.shrinkage_fit, drogue_comparison and seasonal_matrices), then python3 -m src.app.check_intervals
+(about 40 minutes). No existing file or output was changed. The numbers below describe the all-drifter,
+all-year view; section 9 has what changed.
 1. What it does: the user picks a start anywhere in the box (map click, typed position, or the whole
    Benguela coast at once, the Week 6 release) and then a timeframe (15 days to 3 years in 15-day
    steps). Choosing the timeframe plays the drift once: smooth contour bands of the chance of being
@@ -915,9 +976,9 @@ file or output was changed.
    the map: distance travelled, left the box, in the Benguela zone, near the Benguela coast, each
    with a 95% interval and a small chart over time. A Loop switch replays the drift, an (i) button
    explains everything once, and each start shows a data flag (100+ / 10-99 / under 10 drifters)
-   with its key. A "Seasonal forecast" tab is a placeholder until RQ4 is done: Business saves
-   data/processed/seasonal_forecast_app.json (format in export_app_data.py's docstring) and reruns the
-   exporter.
+   with its key. That panel also quotes the seasonal pattern from RQ4, not a forecast (decision 16):
+   src.forecasting.seasonal_robustness saves data/processed/seasonal_pattern_app.json and the exporter
+   puts it in the page.
 2. Groundings (new, a switch on the map): the product leaves out starts whose record ended (decision
    10), so material only drifts or leaves the box. With the switch on, the app uses a second model in
    which it can also run aground. GDP's typedeath 1 marks 208 drifters that ran aground; their starts in
@@ -933,10 +994,10 @@ file or output was changed.
    material released off Recife has run aground, 8.8% (6.0-12.3) from St Helena and 5.7% (0.9-10.8)
    from the Benguela coast, mostly on Brazil.
 3. How: the exporter packs P (float32), the grounding rows and, for both models, bootstrap intervals
-   for every start cell and step into app/data/app_data.js (9.6 MB). The water model uses bootstrap.py's
+   for every start cell and step into app/data/app_data.js (9.6 MB then, 18.2 MB now; decision 23). The water model uses bootstrap.py's
    own 1000 replicates (seed 3001); the shore model resamples its drifters the same way (10 grounded
    drifters have no other usable moves, so its draws differ). The intervals are computed by stepping P
-   backwards on seven vectors, and the page steps either model forward itself.
+   backwards on eight vectors (seven until "reached by then" was added), and the page steps either model forward itself.
 4. Checks:
    - The water model's coast release reproduces coastal_release_tau15d.csv (largest difference 5e-5,
      the CSV's rounding).
@@ -944,8 +1005,8 @@ file or output was changed.
      360 and 1080 days.
    - Bootstrap (src/app/check_intervals.py, outputs/results/app_interval_check.csv): 416 of the app's
      intervals (8 starts, 4 horizons, every quantity, both models) were recomputed the slow way (row
-     weights, forward steps, np.quantile) on the same draws. They match to 1e-7 (float rounding), and
-     every full-data estimate lies inside its interval. The bagged mean (the average over replicates)
+     weights, forward steps, np.quantile) on the same draws. They matched to 1e-7 (float rounding; about
+     2e-4 since the intervals became 16-bit, decision 23), and every full-data estimate lies inside its interval. The bagged mean (the average over replicates)
      sits within a median 1% of the interval's width of the full-data estimate (90% within 7%). The
      largest gaps are in thin cells, e.g. a 15-day distance of 178 km bagged vs 152 km from 7 drifters
      (interval 94-290 km). Note that the app's numbers are the full-data fit; the bootstrap gives only
@@ -1029,8 +1090,8 @@ in logs/ai_use_log.md).
    per drifter-day). The subsample and the "full data later" week are dropped. Remaining runtime
    risk: the Week 8 region swap (a new ~9 min extract per region). The bootstrap turned out cheap:
    1000 refits of the 2 deg P take about 1.5 minutes (Week 6, 2026-10-29). Building the table at
-   six lags with its checks takes 2-3 minutes (Week 7, 2026-10-29). WE NEED TO DOUBLE CHECK IF THESE NUMBERS (e.g. 10mins, 2mins) ARE STILL TRUE
-   BEFORE USING IN README
+   six lags with its checks takes 2-3 minutes (Week 7, 2026-10-29). Rechecked 2026-11-05 (section 8):
+   the scripts' times are measured there. The cloud extract wasn't re-timed; see section 8.
 
 5. Coarse baseline at 4 deg.
    Lachlan's suggestion: build the whole chain (P, long-run maps, story) first on large cells
@@ -1048,7 +1109,8 @@ in logs/ai_use_log.md).
    wind directly, which arguably suits floating material like oil and debris (Business to confirm
    from the literature). The proposal will say P describes near-surface transport including
    direct wind effects; Week 8 compares drogued and undrogued transitions at 4 deg to size the
-   difference.
+   difference. (Week 8 reran the headline numbers, at 2 and 4 deg. The full comparison came on 2026-11-05:
+   section 9, decision 22.)
 
 6a. Sensitivity check: all drifters vs undrogued drifters only (Stella, 2026-09-28; reworded
    2026-10-03 after checking the sources).
@@ -1087,7 +1149,7 @@ in logs/ai_use_log.md).
    region cache doesn't keep. A separate cache means (a) everyone's region cache stays valid (no
    ~10 min rebuild), (b) load.py keeps one job, and (c) scripts that loop over every array in the
    region cache (e.g. the missing-values check in data_quality.py) are unaffected. Building it
-   takes under a minute. ONCE AGAIN, DOUBLE CHECK THIS
+   takes under a minute (not re-timed on 2026-11-05: it reads the cloud; see section 8).
 
 10. Unknown destinations are kept, not dropped.
    Rows whose record ended, or had a gap, at start + tau stay in the table with outcome 2 or 3.
@@ -1101,3 +1163,314 @@ in logs/ai_use_log.md).
        counts drifters that come back as lost. At tau = 15 days only 1.5% of starts leave R, so
        the effect is small for one step but grows with n. Revisit if the 1-year map (P^24) is
        sensitive to it.
+
+12. Position jumps are kept (2026-11-05). 143 hourly pairs imply speeds over 4 m/s, up to 228 km in an hour,
+   from 64 drifters. Week 2 missed them because it judged the reported velocities, which never exceed 3.37
+   m/s. Most stay shifted afterwards rather than bouncing back; the cause isn't known, and the reported
+   velocities don't show them. Over 15 days positions and velocities agree (median gap 2.6 km on a 153 km
+   move). Removing all 630 moves touched by a jump or a gap over 50 km (0.08%) changes the headline numbers
+   only in the third or fourth significant figure (data_forensics.csv), so filtering would add a rule and
+   change nothing. Working norm kept: never change the raw data.
+
+13. Drogue status stays as recorded at the start of each move (closes issue e). 5.8% of drogued starts have lost
+   their drogue by the end of the move (1.8% of all moves change status), so "drogued" means slightly less than it
+   says and the drogued-only results lean a little towards the undrogued ones. The flag itself is clean: no
+   drifter ever goes back from undrogued to drogued. End positions for "left R" rows would need readings
+   from outside R, and the last reading inside R gives what is needed (decision 15).
+
+14. RQ1 subregions and the Orange Basin release (for the team to confirm). The proposal commits to "which
+   subregions supply which others" and named release points such as the Orange Basin, and neither was in
+   the repo. Eight subregions cover the box once each (config/region.yaml): the Benguela coastal cells, Benguela
+   offshore, Angola Basin, Cape Basin, Central and Tropical South Atlantic, Brazil-Malvinas (region_swap.py's box) and
+   North-east Brazil. Their edges are a choice. The Orange Basin release is the 2 deg cell 30-28S, 12-14E (97
+   drifters), which holds the Venus and Mopane blocks if block numbers read as degrees (2913, 2813), about 290 km
+   offshore. Published well coordinates weren't found: confirm before quoting it as a well site.
+
+15. Exits are split by the edge really crossed. Each exit's edge comes from the drifter's last reading in R, for
+   11,493 of 11,654 exits (the rest hit a gap first). The edge nearest the start cell is only right 88% of the
+   time, so it is the fallback only for cells with no observed exit. Observed: south 45%, north 28%, east 27%, west 0%.
+
+16. No forecast and no Seasons view in the app; a season switch at Zac's request (2026-11-05, revised twice the same day).
+   There is no forecast to show: the data stop in October 2022 and the best method is the average of past years'
+   same season, so "next season" would be the same number every year. The AI first advised against a season switch
+   on the map: at 2 deg the best seasonal matrix (alpha near 2000) gives a season's own data about 12% of the weight
+   in a typical cell and gains about 0.3% per move, lighter shrinkage predicts worse (6.7% at alpha 50), and 5 of the
+   9 coastal cells with drifters have none in DJF. Zac asked for the switch anyway, shown as a typical year's pattern
+   (decisions 20 and 21), which is a fair call: the crossing rule can be tested and the page can say what it's worth.
+   The evidence above still stands, and the page says so: a small gain (+0.4% per move, +0.6% for undrogued), and
+   the coast's centre moves at most 0.41 deg after a year and 0.19 deg after 3 months. Corrected: this decision
+   first said the 3-month centre moves "about 1 deg". That was the 4 deg release at alpha 20, not the matrix the map
+   would use. A Seasons view first showed the westward pattern by season and drifter type, which is the stronger
+   evidence for seasons. Zac questioned it and it was removed, along with the tabs: it ignored the start, timeframe and
+   switches and blanked the map, and once the map had a season switch it was a second, disconnected answer to the
+   same question. The pattern is now quoted in the "How to read this" panel, and the full results stay in
+   outputs/results for the report. (The first 2 deg figures were a one-off check: see the AI log.
+   seasonal_matrices.py now does the sum properly.)
+
+17. The drifter bootstrap stays the main interval, and the whole-year ratio is reported beside it. Resampling
+   29 years, nine of them thin, is too rough to replace it, but it shows what the intervals leave out (section 8).
+
+18. "Left the box" means "has left at some point". P^k counts a drifter that leaves and returns as lost, so the
+   fair observed number is a Kaplan-Meier estimate on the same 15-day checkpoints, not the share outside on the
+   day. P itself is unchanged, since a better exit estimate would need a state for "outside but may return". What is
+   reported changes: the app, product.py and README quote the Kaplan-Meier comparison, in place of "about 1 point at
+   30 days, 3 at 90", which mixed the two meanings.
+
+19. Coastal numbers are quoted with their range across the prior (for the team to confirm). Their drifter intervals are too
+   narrow (section 8, part 7): shrinking thin coastal cells biases them in a way the bootstrap can't see. They aren't
+   bias-corrected, as that would rest on the same simulation, so the numbers stay as they are, and the report should
+   give the prior range beside them: the 15-day coastal share is 31%, interval 22-37, range 24-39 from alpha x 0.1 to x 10.
+
+20. The map's seasonal matrices are each season's counts shrunk to the all-year matrix, by leaving out whole years (for
+   the team to confirm). P^s = shrinkage_P(C^s, P, beta), so a season starts from the all-year matrix (the product) and
+   moves only as far as its own data justify. Beta is chosen by scoring each left-out year, not left-out drifters,
+   because drifters in the same year share the same eddies and leaving out drifters alone would reward noise. It comes
+   out at 1000 for both sets, in line with Business's finding that seasonal matrices need heavy shrinkage (decision 16),
+   and gains +0.0041 per move
+   (0.0025 to 0.0058; all drifters) and +0.0057 (0.0037 to 0.0078; undrogued) on test drifters in other years. The price is
+   that most of the real difference is shrunk away: the summer-winter gap in westward drift from the Benguela zone goes
+   from 51 to 18 km per 15 days (34% kept), and 83 to 18 km for undrogued (21% kept). That's why the page says "differences
+   here are understated", and why the "How to read this" panel quotes the plain averages.
+   Tried and dropped (one-off, see the AI log): a prior carrying a 4 deg seasonal shift. It gains 0.0045 against 0.0041
+   (undrogued 0.0062 against 0.0057), and keeps 35% against 34% (33% against 21%). Not worth a second setting, and it says
+   something useful: beyond the mean drift, seasonal detail mostly doesn't recur from year to year. The grounding chance
+   stays all-year: 199 grounded drifters are too few to split four ways.
+
+21. Crossing seasons: each 15-day step uses the matrix of the season it starts in. For a release in a chosen season
+   the page starts on that season's first day and changes matrix every 6 steps (90 days), so a year passes through all
+   four and comes back. Tested by date on test drifters, fitted on odd years and scored on even and then the other way:
+   log-likelihood per move against the all-year matrix, all drifters (95% intervals from resampling test drifters).
+       after     changing with the seasons     staying in the release season
+       30 days   +0.0104                       +0.0100
+       90 days   +0.0211                       +0.0140
+       180 days  +0.0178 (0.0141 to 0.0212)    -0.0087 (-0.0130 to -0.0049)
+       360 days  +0.0103 (0.0057 to 0.0143)    -0.0105 (-0.0149 to -0.0056)
+   So the rule is right: staying in the release season does worse than ignoring seasons altogether from 6 months on,
+   and changing beats both at every horizon past a month. Undrogued is alike (+0.0162 and -0.0082 at 360 days).
+   Simplifications: every release is on a season's first day, and four 90-day seasons make a 360-day year, so the
+   page drifts about 5 days a year from the calendar (16 days by year 3). Drifters in the test are scored by their real
+   dates, so this doesn't flatter the page.
+
+22. All drifters stays the main estimate, and undrogued is offered beside it, for the user to choose (for the team to
+   confirm). Decision 6 stands. The undrogued matrix predicts undrogued drifters better from 3 months on, but it's much
+   worse for drogued ones, and the case for oil rests on a handful of studies (decision 6a). A move counts as undrogued
+   if it starts undrogued (decision 13). This status is clean at the start: no drifter regains a drogue. It has its own
+   alpha, chosen the same way (56.2 again), and its own release cells (8 of the 9). Drogued-only isn't offered: 0.3% of 2 deg
+   cells are adequate.
+
+23. How the app's bigger data file stays usable (for the team to confirm). Two sets, two models and four seasons would be
+   about 30 MB at the old 32 bits per interval limit, so they are stored as 16 bits on a log scale. That rounds them by at most 1.8e-4 of
+   their value, and values under 1e-6% are stored as "too small", which the page shows as under 0.001%. All-year
+   intervals keep 1000 replicates at all 72 steps. Seasonal ones use 200 replicates at 23 steps (1-6, 8-24 by 2, 30-72 by 6,
+   including every change of season), and the page reads the steps between off a straight line on a log scale. Measured on
+   1,408 comparisons with brute force: where the low end is at least 1%, the error on those steps is a median 0.9% of the
+   value and at most 14%; the largest, 49%, is on numbers under 0.02%. Treat seasonal ranges as a guide, as the
+   page's "typical year" wording does. The file is 18.2 MB and opens in under a second.
+
+
+8. Forensic review (2026-11-05)
+
+Asked (Zac): read the whole code base and make this an exemplar, leaving the report to the team, without breaking
+anything. Every script, test, config file and the proposal were read. Nothing already on main changes in meaning: the
+existing outputs were regenerated and compared (part 1), and only the seasonal ones, corrected the same day, differ.
+
+1. Does it reproduce? python3 -m src.run_all ran every step from a clean copy, with only the data/interim caches, in
+   35 minutes. Compared with the outputs as they stood before this review's new scripts, 38 were byte-identical and the
+   other 26 were explained: 5 CSVs differ only in line endings (identical once normalised), 2 long-run .npz files by floating-
+   point rounding across machines (at most 1e-9 relative), 18 figures in rendering only (their data are identical), and the app's
+   data only by the new Seasons block and notes (P and every interval identical). The seasonal CSVs were the same-day corrections.
+   Clean environment: environment.yml builds in 90 seconds on Python 3.14, and all tests pass there and on Python 3.11.
+   Measured times (minutes, 10-core laptop, 2026-11-05; decisions 4 and 9 asked for this): data_quality 2.2, adequacy 1.2, lags 1.2,
+   bootstrap 1.6, markov_check 1.0, long_run 4.1, robustness 3.1, connectivity 2.1, year_intervals 1.0, interval_coverage 5.7,
+   export_app_data 7.2, check_intervals 1.6; every other script under a minute. So "every script under 2 minutes" no longer holds
+   for the bootstrap-heavy ones.
+   Not rerun: the cloud extract (decisions 4 and 9), which reads about 16 GB. It was last rebuilt from live data on
+   2026-10-01, identical array for array; run python3 -m src.run_all with data/interim/ empty to time it again.
+
+2. Against the proposal. What was promised and where it now is:
+       RQ1 where it goes, gathers    coastal_release.py, long_run.py            existed
+       RQ1 which areas supply which  connectivity.py                            MISSING, added
+       RQ1 where and how fast it     connectivity.py (long_run.py had the rate) rate existed, where added
+         leaves
+       RQ2 smoothing vs raw counts   evaluate.py, score_intervals.py            existed
+       RQ3 undrogued vs all          robustness.py                              headline numbers only; see section 9
+       RQ4 seasons                   seasonal_forecast.py, seasonal_robustness.py  existed, corrected
+       O1 4 and 2 deg matrices,      files existed; load_product now loads both only 2 deg loaded
+         loadable
+       O2 named release points       connectivity.py (Orange Basin)             MISSING, added
+       O4 documented, tested,        README.md, src/run_all.py                  README was title-only, added
+         reproducible
+
+3. RQ1, the new results (connectivity_tau15d.csv, connectivity.png, orange_basin_release.png):
+   - After a year, material from the Benguela coast is 77% (72-80) in the Central South Atlantic and 15% (12-19) in
+     the Tropical South Atlantic. It takes about 330 days for 1% to have crossed 30W.
+   - From the Orange Basin: 99% in Benguela offshore after 15 days, 82% after 3 months (15% already in the Central South
+     Atlantic), 84% (80-87) in the Central South Atlantic after a year. The chance of having reached the Benguela coastal
+     cells by a year is 2.3% (0.8-3.9), a lower bound, since grounded drifters stop reporting. 0.24% (0.18-0.33) has left the box.
+   - Leaving: 0.25% per 15 days in the long run (0.22-0.29), through the south (0.14%) and east (0.10%), hardly north
+     (0.008%) and not west. These split the rate by where drifters crossed (decision 15).
+
+4. Is the data sound? (data_forensics.py). Decisions 12 and 13. Issue f closed: decision 8's numbers reproduce exactly
+   (131 with no end_date, 8,751 gaps, median 20 h, 18,626 rows the end_date rule calls exits, 6,577 of them gaps, 922 ended,
+   527 real exits missed). No start is in an all-land cell, and there are no repeated readings.
+
+5. Do the probabilities mean what they say? (calibration.py, calibration_tau15d.csv, calibration.png). This is the
+   primary question, and log-likelihood couldn't answer it. On held-out test drifters, with P fitted on train + valid:
+   - Destination cells are well calibrated at every horizon, predicted against observed:
+       15 days   5.8% / 5.9%   17.4% / 17.4%   35.1% / 34.9%
+       90 days   0.59% / 0.62%  1.8% / 1.9%   4.5% / 4.4%
+       360 days  0.18% / 0.21%  0.58% / 0.58%  1.37% / 1.33%
+     This is the project's strongest reliability result, and 1 year is further than any earlier check went.
+   - The app's lines. 50% area: holds 59.7%, 49.9%, 46.2% of real moves at 15, 90 and 360 days (the set really holds 58.7%,
+     51.5%, 50.5%, being whole cells). 90% area: 91.7%, 89.0%, 85.4% (intervals 91.3-92.2, 87.6-90.4, 81.9-88.5). Slightly
+     optimistic at a year, and more so from thin cells (83.5% under 100 drifters). The app now says so.
+   - Having left the box runs high at long times (Kaplan-Meier, decision 18): 1.7% predicted against 1.5% observed (1.2-1.9)
+     at 15 days, 6.6% against 5.2% (4.2-6.6) at 90 days, 15.4% against 10.4% (7.9-13.4) at 360 days. So about 1.5 times too
+     high at a year, across all starts; the team's "on the high side" was right, and larger than it looked at 90 days.
+     About a fifth of the test drifters that leave are back in the box on the day (21% at 90 days, 20% at 360).
+
+6. Does it hold from year to year? (year_intervals.py, year_intervals_tau15d.csv)
+   - The past predicts later years. Moves of drifters first seen from 2015, scored by a matrix fitted before 2015, are within
+     1% of a matrix fitted to as many moves from all years: -0.0075 per move (-0.0155 to +0.0006), -2.105 against -2.098. So
+     P can be used as a planning tool for later years, on this evidence.
+   - The drifter intervals leave out year-to-year change. Resampling whole years widens the percentages little (0.97-1.24
+     times), but centres more: after a year the longitude interval is 2.1 times as wide (-19.7 to -14.2 against -18.1 to
+     -15.6), long-run centre latitude 2.3 times, expected years in the box 1.8 times. Say this beside any interval
+     quoted in the report. The app now does.
+
+7. Do the intervals contain a known truth? (interval_coverage.py, interval_coverage_tau15d.csv)
+   Synthetic worlds with the product as the truth, keeping the real design (every move's drifter and start cell): 100 worlds, 200
+   bootstrap replicates each. Share of worlds whose 95% interval held the truth, over the 12 numbers checked (% left, % in the
+   coastal zone and the centre, at 15, 90 and 360 days):
+       starts                     median    range
+       cells with 100+ drifters   92%       86-96
+       cells with 10-99           89%       80-98
+       cells with under 10        83%       74-98
+       the whole Benguela coast   75%       22-100
+   - Single-cell intervals are close to what they claim where there are data, and the app's data flags mean what they say.
+   - The whole-coast intervals are too narrow, and this is the review's main caution for the report. The 15-day coastal share's
+     interval held the truth in 53% of worlds, with a bias of -3.9 points. The same worlds fitted with next to no prior have a bias of
+     +0.6, so the cause is shrinkage on thin coastal cells, which the bootstrap can't see. It matches Week 7's finding that coastal
+     numbers depend on the prior (39%, 31%, 24% at alpha x 0.1, 1, 10). See decision 19.
+   - This world is exactly Markov and the same every year, so it is a best case for the intervals.
+
+8. Other corrections made: the seasonal write-up (see the Business block); the seasonal forecast figure no longer clips
+   labels or draws lines across missing years; tests added for modules that had none, including drifter_records (which decides
+   "left" against "stopped reporting"), and for the matrix forecast. 116 tests, all passing.
+
+9. What this review can't do, for the team:
+   a. Sign-offs. Every "for the team to confirm" list is still open (Weeks 6, 7, 8, Business, App), plus decisions 14 and 16-23.
+      The AI's choices need a person's decision before the report calls them the team's.
+   b. Michelle to review the seasonal corrections, and add a log entry for the original Week 6-8 work.
+   c. Sources, before the report relies on them: the 0.5 m drogue depth for Garcia-Pineda et al. 2020; the "garbage patch" comparison
+      for the long-run centre; the Orange Basin position (decision 14); a source for the seasonal winds. Most literature was
+      checked from abstracts only (decision 6a).
+   d. Poster feedback isn't recorded anywhere in the repo, so "fix issues raised at the poster" (Week 6) can't be closed from here.
+   e. The report and presentation. README.md's findings are a starting point, not the report.
+
+
+9. The undrogued comparison and finishing the app (2026-11-05)
+
+On branch week9-app-finalise, built on week9-seasonal-corrections so that nothing on it is lost, and to be reviewed after
+it. Asked (Zac): (1) earlier we meant to compare all drifters with undrogued drifters only, since undrogued drifters are a
+better analogue for oil, and it may never have been done: check, and produce the code if not; (2) the app: rename it the
+South Atlantic Gyre Drift Explorer, add the undrogued / all switch, add the seasonal analysis including what happens when
+a timeframe crosses seasons, and make it more rigorous and helpful without clutter.
+
+1. Had it been done? Partly. Week 8's robustness.py reran the headline numbers at 2 and 4 deg by drifter type, and
+   seasonal_robustness.py split the westward drift. But the undrogued matrix wasn't kept, the gaps had no fair interval, and
+   nobody had tested whether it predicts undrogued drifters better. On the reason, decisions 6 and 6a are more careful than
+   "a better analogue": undrogued drifters "arguably suit" floating material, on a handful of studies (mainly Novelli et al. 2020,
+   in the Gulf of Mexico). Nothing here weathers or evaporates.
+
+2. The comparison (src/inference/drogue_comparison.py; outputs/results/drogue_comparison_tau15d.csv, outputs/figures/
+   drogue_comparison.png, data/processed/shrinkage_P_2deg_tau15d_undrogued.npz). Both matrices are refitted on the same
+   resample of drifters, so a gap has a fair interval: a drifter that appears in both sets is drawn in both.
+       the data            drifters   moves     cells adequate   alpha   coastal release cells
+       all drifters        1,892      776,777   41.4%            56.2    9
+       undrogued only      1,290      527,324   19.3%            56.2    8 (and 3 cells with only the prior)
+   After a year (95% intervals; gap = undrogued minus all):
+       from the Benguela coast    all               undrogued          gap
+       % left the box             0.89 (0.61-1.55)  6.79 (3.87-10.86)  +5.89 (3.08 to 9.49)
+       centre longitude           16.8W             27.0W              -10.2 deg (-11.3 to -9.1)
+       from the Orange Basin
+       % left the box             0.24              3.42               +3.18 (1.75 to 5.26)
+       centre longitude                                                -9.8 deg
+       % reached the coast        2.27              1.45               -0.82 (-2.34 to +0.40), no clear gap
+   Where it goes changes too: from the coast, 76.8% against 47.7% is in the Central South Atlantic after a year (gap -29.1), and
+   undrogued material reaches it sooner (27.7% against 8.5% at 3 months).
+   Does it predict better? Log-likelihood per move on undrogued test drifters, undrogued matrix minus all-drifter matrix:
+       15 days -0.0099 (-0.0245 to +0.0028), 90 days +0.0633 (0.0177 to 0.1164), 360 days +0.1588 (0.0726 to 0.2507).
+   So no better over one step, and clearly better from 3 months on. On drogued test drifters it is clearly worse (-0.36, -0.77,
+   -0.68). The 90% line on undrogued test drifters, against the 90% it claims:
+       all-drifter matrix 91.3%, 87.8%, 84.7%; undrogued matrix 91.7%, 90.7%, 90.0% (15, 90, 360 days).
+   Having left the box still runs high (Kaplan-Meier, decision 18): after a year 13.1% predicted against 9.7% observed
+   (6.7-13.2), with 12.5% for the all-drifter matrix.
+   Caution: the undrogued whole-coast ranges are too narrow, more so than the all-drifter ones (decision 19). The known-truth
+   simulation, with the undrogued matrix as the truth (interval_coverage_undrogued_tau15d.csv), gives (median and range over 12 numbers):
+       starts                     all drifters    undrogued
+       cells with 100+ drifters   92% (86-96)     92% (78-97)
+       cells with 10-99           89% (80-98)     89% (72-99)
+       cells with under 10        83% (74-98)     81% (75-98)
+       the whole Benguela coast   75% (22-100)    69% (9-100)
+   The worst are where the centre is: the whole-coast longitude after a year held the truth in 13% of worlds (bias 1.27 deg east),
+   the latitude in 9-12% at 90 and 360 days. With almost no prior the bias falls to 0.29 deg, so the cause is again shrinking thin
+   coastal cells. So the gap of 10 deg is real, and if anything understated, but its -11.3 to -9.1 shouldn't be quoted as a
+   true 95% range. The app shows no range for the centre's position. It does show the distance's range, and the note beside the
+   whole coast says these ranges are too narrow, with the 69%.
+
+3. Seasons (src/forecasting/seasonal_matrices.py; outputs/results/seasonal_matrices_tau15d.csv, outputs/figures/
+   seasonal_matrices.png, data/processed/seasonal_counts_2deg_tau15d.npz). How the matrices are made is decision 20, and
+   crossing seasons is decision 21. What it does to the answers: from the coast after a year the centre's longitude moves at
+   most 0.41 deg (DJF +0.41, JJA -0.39), and undrogued at most 0.17 deg. Its direction agrees with Business's: the coastal share
+   for a summer release after 3 months is 0.55% against 0.63% all year (-0.08, -0.21 to -0.03). Coastal cells are thin here: of the
+   9 release cells, 5 have no moves in DJF, 1 in MAM, 2 in JJA and none in SON (162, 284, 639 and 500 moves); of the
+   undrogued 8, 5, 3, 2 and 1 (61, 156, 234 and 287 moves). Those cells simply take the all-year row.
+   So the honest summary: the switch is correct and tested, and it mostly shows how little the seasons change a long
+   drift once you ask what holds up in other years.
+
+4. What changed in the app. Title; a step 3, "Under what conditions?", with Drifters (all, undrogued) and Released (all year or
+   a season); a strip under the timeline and a label on the map showing the season at each moment; a hollow diamond
+   marking the all-drifter, all-year answer whenever another is chosen. For "more rigorous and more helpful", every addition
+   answers a question a user would ask next, or says how far to trust what is shown:
+   - "How far to trust this", with only what applies to that start, set, season and day: simulation coverage for that much
+     data, the 90% line and exits on drifters the model never saw, year-to-year change, how much of the seasonal gap is kept;
+   - "Reached by then" beside the coast row: the share near the coast today understates how much has been there;
+   - "Mostly in" and the named subregions (decision 14);
+   - the Orange Basin as a one-click start (decision 14);
+   - product.py: load_product(drifters="undrogued") and forecast(..., season="DJF").
+   Left out to avoid clutter: the exit-edge breakdown, a separate prior-range display (the reports should still quote it, decision
+   19), more result rows, and map overlays beyond the one comparison marker.
+   Removed (Zac, decision 16): the Drift explorer and Seasons tabs. The page is now one view, with the information button
+   beside the title, and an old link to the Seasons view opens the map.
+
+5. Checks.
+   - tests/test_drogue_season_week9.py, 22 tests with hand-worked answers: paired draws, seasonal counts and matrices,
+     leave-one-year-out with a leak test that also checks it can fail, step seasons by date, first passage forward and
+     backward, 16-bit round trip. 139 tests in the repo, all passing, including the page against Python for both sets, both
+     models and the seasons in headless Chrome.
+   - The all-drifter matrix and its coast release still match the saved results (largest difference 4.8e-5, the CSV's rounding),
+     and undrogued matches drogue_comparison's (5e-5). Rerunning drogue_comparison gave an identical CSV and matrix, and
+     interval_coverage --drifters all gave the same table after being restructured. Only three existing outputs changed:
+     the app's data, its interval check and the seasonal text (seasonal_forecast_app.json, now the shorter
+     seasonal_pattern_app.json). Removing the tabs changed nothing else in the data file: compared block by block with the
+     file before, P, the seasons and every interval are identical, so the interval check wasn't rerun for it.
+   - check_intervals.py recomputed 2,816 seasonal intervals and 704 all-year ones the slow way, on the same draws, for both sets
+     and models: at most 1.8e-4 on seasonal steps that are stored, which is the 16-bit rounding, and up to 6.6e-4 all year. The
+     larger all-year figure is a value under 1e-6% stored as "too small" (traced in the all-drifter water model: 5.8e-7%, and
+     every other row there within 1.8e-4). Decision 23 has the steps between. Every all-year estimate is inside its range, in 704 of 704.
+   - One-off: over every start, season, set, model, quantity and stored step (about 1.2 million ranges) the page's number is
+     outside its seasonal range 8 times, allowing for rounding, and never for a whole-coast release.
+   - One-off: every control clicked through on the real data in headless Chrome, with no errors: 10 distinct answers from 10
+     drifter and season combinations, with groundings, layers, the timeline and the information panel; toggling to undrogued
+     at the 3 cells with none (the answer falls back on the 4 deg area, with no range and a note). Screenshots at desktop and 390 px.
+   - Times (minutes, 2026-11-05): drogue_comparison 5.6, seasonal_matrices 3.3, interval_coverage undrogued 7.3 (and all 5.7),
+     export_app_data 25.5, check_intervals 39.8. The full run is now about 1 hour 50 minutes: section 8's 35, less the old
+     export and check, plus these. That total is added up, not measured: each changed step was rerun in order, but
+     src.run_all wasn't run end to end again.
+   - Not tested: the seasonal ranges in a known-truth simulation, so they lean on the all-year result, and the page says so.
+
+6. For the team to confirm: decisions 20-23; whether the page should open with all drifters (decision 22); how the report words
+   oil and undrogued drifters (Business, from the literature, decision 6a); whether the season switch earns its place given how little it
+   changes (decision 16), and if it doesn't, removing it is one step of the page. Review this after section 8's branch. If reviewers
+   change that branch, it needs merging into this one.
