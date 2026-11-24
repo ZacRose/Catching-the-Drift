@@ -1,4 +1,4 @@
-# Catching the Drift
+# Catching the Drift: Estimating Surface Transport in the South Atlantic Gyre Using a Drifter-Based Transition Matrix
 
 If something floating enters the water off south-west Africa, where is it likely to be in 15 days, three months
 or a year, and how far can that answer be trusted? We estimate this from 28 years of satellite-tracked drifting
