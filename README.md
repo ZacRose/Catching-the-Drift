@@ -15,7 +15,9 @@ Open [`app/index.html`](app/index.html), the South Atlantic Gyre Drift Explorer,
 results. It needs no installation, server or internet connection. Choose a start, a timeframe and, optionally, the
 drifter type and release season. The [app's README](app/README.md) explains how it works.
 
-To rerun the analysis:
+To get the code, clone the repository or download the `final-report` release from the Releases page.
+
+To rerun the analysis (on Windows, use `python` in place of `python3`):
 
 ```bash
 conda env create -f environment.yml && conda activate DATA3001
@@ -132,12 +134,36 @@ grid cells, numbered from the south-west corner, then "left the box" as the last
 
 ## Reproducibility
 
+Requirements: [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or Anaconda, and about 1 GB of disk space.
+Google Chrome is optional and is only used by one app test, which is skipped without it. The fitted matrices,
+transition tables and coastline are committed in `data/`, so nothing else needs downloading for `--from-tables`,
+the app or `load_product()`.
+
+### macOS and Linux
+
+Open Terminal in the repository folder:
+
 ```bash
 conda env create -f environment.yml && conda activate DATA3001
-python3 -m pytest tests                  # 139 tests, about a minute (the app test needs Google Chrome)
+python3 -m pytest tests                  # 139 tests, about a minute (one app test is skipped without Google Chrome)
 python3 -m src.run_all --from-tables     # 21 of the 35 steps from the committed tables, no internet needed
 python3 -m src.run_all                   # all 35 steps from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
 ```
+
+### Windows
+
+Open Anaconda Prompt (or a PowerShell terminal where conda works) in the repository folder. Use `python` in
+place of `python3`:
+
+```powershell
+conda env create -f environment.yml
+conda activate DATA3001
+python -m pytest tests                   # 139 tests, about a minute (one app test is skipped without Google Chrome)
+python -m src.run_all --from-tables      # 21 of the 35 steps from the committed tables, no internet needed
+python -m src.run_all                    # all 35 steps from the raw data (reads the cloud copy once, about 10 minutes, 3 GB of memory)
+```
+
+### Notes
 
 The environment uses Python 3.14, and the tests also pass on 3.11.
 
@@ -148,10 +174,10 @@ they run. Every script also runs on its own, and its docstring says what it read
 checks that use the full drifter records or lags longer than 90 days) and keeps their committed results. The full
 run from the raw data takes about 1 hour 50 minutes on a 10-core laptop.
 
-**Last rerun:** 23 November 2026, from a clean clone of commit `5f77bd3` with `python3 -m src.run_all --from-tables`.
-All 21 steps ran in 2 hours 18 minutes on a 2-core laptop with 4 GB of memory. Of the 54 result and matrix files,
-48 were identical to the committed ones and the other 6 differed only by floating-point rounding (below 1e-9
-relative). The version submitted with the report is tagged `final-report`.
+**Last rerun:** 23 November 2026, on Windows, from a clean clone of commit `5f77bd3` with
+`python -m src.run_all --from-tables`. All 21 steps ran in 2 hours 18 minutes on a 2-core laptop with 4 GB of
+memory. Of the 54 result and matrix files, 48 were identical to the committed ones and the other 6 differed only by
+floating-point rounding (below 1e-9 relative). The version submitted with the report is tagged `final-report`.
 
 The raw data are never changed. The GDP is read from the cloud with
 [clouddrift](https://github.com/Cloud-Drift/clouddrift) and region R is cached in `data/interim/` (not in git).
